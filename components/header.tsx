@@ -27,7 +27,7 @@ export function Header() {
           <div className="flex items-center gap-1">
             <TrendingUp className="h-7 w-7 text-primary" />
             <span className="text-xl font-bold text-foreground">
-              Bundesliga<span className="text-primary">Insights</span>
+              POC <span className="text-primary">Insights</span>
             </span>
           </div>
         </Link>

@@ -5,6 +5,8 @@ import { Header } from '@/components/header'
 import { NotificationToast } from '@/components/notification-toast'
 import { NotificationProvider } from '@/lib/notification-context'
 import { UserProvider } from '@/lib/user-context'
+import { QteProvider } from '@/lib/qte-context'
+import { BettingQte } from '@/components/betting-qte'
 import './globals.css'
 
 const _geist = Geist({ subsets: ['latin'] })
@@ -32,11 +34,14 @@ export default function RootLayout({
       <body className="font-sans antialiased">
         <UserProvider>
           <NotificationProvider>
-            <div className="flex min-h-screen flex-col">
-              <Header />
-              <main className="flex-1">{children}</main>
-            </div>
-            <NotificationToast />
+            <QteProvider>
+              <div className="flex min-h-screen flex-col">
+                <Header />
+                <main className="flex-1">{children}</main>
+              </div>
+              <NotificationToast />
+              <BettingQte />
+            </QteProvider>
           </NotificationProvider>
         </UserProvider>
         <Analytics />

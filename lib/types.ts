@@ -93,3 +93,20 @@ export interface MatchInsight {
   features: InsightFeature[]
   timestamp: Date
 }
+export interface QteAction {
+  label: string
+  action: string
+  odds?: number
+}
+
+export interface QteEvent {
+  id: string
+  matchId: string
+  type: 'goal' | 'card'
+  title: string
+  message: string
+  duration: number // in seconds
+  confidence: number
+  actions: QteAction[]
+  timestamp: Date
+}
