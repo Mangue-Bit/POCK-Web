@@ -33,12 +33,12 @@ export function TeamBadge({ team, size = 'md', showName = false }: TeamBadgeProp
           borderColor: `${team.primaryColor}60`,
         }}
       >
-        <span
-          className="font-bold"
-          style={{ color: team.primaryColor }}
-        >
-          {getTeamInitials(team.name)}
-        </span>
+        <img
+          src={team.logo}
+          alt={team.name}
+          className="object-contain w-3/4 h-3/4"
+          style={{ maxWidth: '80%', maxHeight: '80%' }}
+        />
       </div>
       {showName && (
         <span className="text-center text-sm font-medium text-foreground">

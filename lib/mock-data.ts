@@ -1,16 +1,16 @@
 import type { Team, Match, User, Notification, MatchInsight } from './types'
 
 export const bundesligaTeams: Team[] = [
-  { id: 'bay', name: 'Bayern München', shortName: 'BAY', logo: '/teams/bayern.png', primaryColor: '#DC052D' },
-  { id: 'bvb', name: 'Borussia Dortmund', shortName: 'BVB', logo: '/teams/dortmund.png', primaryColor: '#FDE100' },
-  { id: 'rbl', name: 'RB Leipzig', shortName: 'RBL', logo: '/teams/leipzig.png', primaryColor: '#DD0741' },
-  { id: 'b04', name: 'Bayer Leverkusen', shortName: 'B04', logo: '/teams/leverkusen.png', primaryColor: '#E32221' },
-  { id: 'sge', name: 'Eintracht Frankfurt', shortName: 'SGE', logo: '/teams/frankfurt.png', primaryColor: '#E1000F' },
-  { id: 'wob', name: 'VfL Wolfsburg', shortName: 'WOB', logo: '/teams/wolfsburg.png', primaryColor: '#65B32E' },
-  { id: 'bmg', name: 'Borussia Mönchengladbach', shortName: 'BMG', logo: '/teams/gladbach.png', primaryColor: '#000000' },
-  { id: 'scf', name: 'SC Freiburg', shortName: 'SCF', logo: '/teams/freiburg.png', primaryColor: '#000000' },
-  { id: 'tsg', name: 'TSG Hoffenheim', shortName: 'TSG', logo: '/teams/hoffenheim.png', primaryColor: '#1961B5' },
-  { id: 'fcu', name: 'Union Berlin', shortName: 'FCU', logo: '/teams/union.png', primaryColor: '#EB1923' },
+  { id: 'bay', name: 'Bayern München', shortName: 'BAY', logo: '/teams/FC-Bayern.png', primaryColor: '#DC052D' },
+  { id: 'bvb', name: 'Borussia Dortmund', shortName: 'BVB', logo: '/teams/Borussia-Dortmund.png', primaryColor: '#FDE100' },
+  { id: 'rbl', name: 'RB Leipzig', shortName: 'RBL', logo: '/teams/RB-Leipzig.png', primaryColor: '#DD0741' },
+  { id: 'b04', name: 'Bayer Leverkusen', shortName: 'B04', logo: '/teams/Bayer-Leverkusen.png', primaryColor: '#E32221' },
+  { id: 'sge', name: 'Eintracht Frankfurt', shortName: 'SGE', logo: '/teams/Eintracht-Frankfurt.png', primaryColor: '#E1000F' },
+  { id: 'wob', name: 'VfL Wolfsburg', shortName: 'WOB', logo: '/teams/VfL-Wolfsburg.png', primaryColor: '#65B32E' },
+  { id: 'bmg', name: 'Borussia Mönchengladbach', shortName: 'BMG', logo: '/teams/Borussia-Mönchengladbach.png', primaryColor: '#000000' },
+  { id: 'scf', name: 'SC Freiburg', shortName: 'SCF', logo: '/teams/SC-Freiburg.png', primaryColor: '#000000' },
+  { id: 'tsg', name: 'TSG Hoffenheim', shortName: 'TSG', logo: '/teams/TSG-Hoffenheim.png', primaryColor: '#1961B5' },
+  { id: 'fcu', name: 'Union Berlin', shortName: 'FCU', logo: '/teams/Union-Berlin.png', primaryColor: '#EB1923' },
 ]
 
 export const mockMatches: Match[] = [
