@@ -81,7 +81,7 @@ export function MatchTimeline({ events }: MatchTimelineProps) {
         >
           <div
             className={cn(
-              'flex min-w-[60px] items-center gap-2',
+              'flex min-w-15 items-center gap-2',
               event.team === 'away' && 'flex-row-reverse'
             )}
           >

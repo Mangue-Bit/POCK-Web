@@ -56,29 +56,7 @@ export default function HomePage() {
           </Button>
         </div>
       </div>
-
-      {/* Stats Bar */}
-      <div className="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
-        <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Total Seguindo</p>
-          <p className="text-2xl font-bold text-foreground">{followedMatches.length}</p>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Ao Vivo</p>
-          <p className="text-2xl font-bold text-primary">{liveCount}</p>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Gols Hoje</p>
-          <p className="text-2xl font-bold text-foreground">
-            {followedMatches.reduce((acc, m) => acc + m.homeScore + m.awayScore, 0)}
-          </p>
-        </div>
-        <div className="rounded-lg border border-border bg-card p-4">
-          <p className="text-sm text-muted-foreground">Insights Hoje</p>
-          <p className="text-2xl font-bold text-chart-5">12</p>
-        </div>
-      </div>
-
+      
       {/* Matches Grid */}
       {followedMatches.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-lg border border-dashed border-border bg-card/50 py-16">
@@ -101,20 +79,6 @@ export default function HomePage() {
           ))}
         </div>
       )}
-
-      {/* Info Section */}
-      <div className="mt-12 rounded-lg border border-primary/20 bg-primary/5 p-6">
-        <h3 className="mb-2 font-semibold text-foreground">
-          Como funcionam os insights?
-        </h3>
-        <p className="text-sm text-muted-foreground leading-relaxed">
-          Nossa inteligência artificial analisa dados em tempo real das partidas,
-          incluindo estatísticas, histórico, odds e padrões de jogo. Quando
-          detectamos uma oportunidade ou mudança significativa, você recebe uma
-          notificação com a análise e o nível de confiança do modelo. Tudo baseado
-          em machine learning e explicabilidade SHAP.
-        </p>
-      </div>
     </div>
   )
 }
