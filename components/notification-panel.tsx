@@ -1,7 +1,14 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { X, Check, AlertTriangle, Info, Zap, TrendingUp } from 'lucide-react'
+import { 
+  XMarkIcon, 
+  CheckIcon, 
+  ExclamationTriangleIcon, 
+  InformationCircleIcon, 
+  BoltIcon, 
+  ArrowTrendingUpIcon 
+} from '@heroicons/react/24/solid'
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { useNotifications } from '@/lib/notification-context'
@@ -15,13 +22,13 @@ interface NotificationPanelProps {
 function getNotificationIcon(type: InsightType) {
   switch (type) {
     case 'opportunity':
-      return TrendingUp
+      return ArrowTrendingUpIcon
     case 'warning':
-      return AlertTriangle
+      return ExclamationTriangleIcon
     case 'momentum':
-      return Zap
+      return BoltIcon
     default:
-      return Info
+      return InformationCircleIcon
   }
 }
 
@@ -85,7 +92,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
               className="text-xs text-muted-foreground hover:text-foreground"
               onClick={markAllAsRead}
             >
-              <Check className="mr-1 h-3 w-3" />
+              <CheckIcon className="mr-1 h-3 w-3" />
               Marcar todas
             </Button>
           )}
@@ -95,7 +102,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
             className="h-8 w-8 text-muted-foreground hover:text-foreground"
             onClick={onClose}
           >
-            <X className="h-4 w-4" />
+            <XMarkIcon className="h-4 w-4" />
           </Button>
         </div>
       </div>
@@ -103,7 +110,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
       <ScrollArea className="h-[400px]">
         {notifications.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <Info className="mb-2 h-10 w-10" />
+            <InformationCircleIcon className="mb-2 h-10 w-10 opacity-30" />
             <p>Nenhuma notificação</p>
           </div>
         ) : (
@@ -153,7 +160,7 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
                           <>
                             <span>•</span>
                             <span className="text-primary">
-                              {notification.confidence}% confiança
+                              {notification.confidence}% probabilidade
                             </span>
                           </>
                         )}

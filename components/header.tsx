@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { Bell, User, Trophy, TrendingUp } from 'lucide-react'
+import { BellIcon, UserIcon, TrophyIcon, ArrowTrendingUpIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useNotifications } from '@/lib/notification-context'
@@ -10,8 +10,8 @@ import { NotificationPanel } from './notification-panel'
 import { useState } from 'react'
 
 const navItems = [
-  { href: '/', label: 'Jogos', icon: Trophy },
-  { href: '/perfil', label: 'Perfil', icon: User },
+  { href: '/', label: 'Jogos', icon: TrophyIcon },
+  { href: '/perfil', label: 'Perfil', icon: UserIcon },
 ]
 
 export function Header() {
@@ -25,7 +25,7 @@ export function Header() {
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <div className="flex items-center gap-1">
-            <TrendingUp className="h-7 w-7 text-primary" />
+            <ArrowTrendingUpIcon className="h-7 w-7 text-primary" />
             <span className="text-xl font-bold text-foreground">
               POC <span className="text-primary">Insights</span>
             </span>
@@ -66,7 +66,7 @@ export function Header() {
               className="relative text-muted-foreground hover:text-foreground hover:bg-secondary"
               onClick={() => setShowNotifications(!showNotifications)}
             >
-              <Bell className="h-5 w-5" />
+              <BellIcon className="h-5 w-5" />
               {unreadCount > 0 && (
                 <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
                   {unreadCount > 9 ? '9+' : unreadCount}

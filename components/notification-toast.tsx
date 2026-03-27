@@ -1,21 +1,28 @@
 'use client'
 
-import { X, TrendingUp, AlertTriangle, Info, Zap } from 'lucide-react'
+import { 
+  XMarkIcon, 
+  ArrowTrendingUpIcon, 
+  ExclamationTriangleIcon, 
+  InformationCircleIcon, 
+  BoltIcon 
+} from '@heroicons/react/24/solid'
 import { Button } from '@/components/ui/button'
 import { useNotifications } from '@/lib/notification-context'
 import { cn } from '@/lib/utils'
 import type { InsightType } from '@/lib/types'
+import { mockMatches } from '@/lib/mock-data'
 
 function getNotificationIcon(type: InsightType) {
   switch (type) {
     case 'opportunity':
-      return TrendingUp
+      return ArrowTrendingUpIcon
     case 'warning':
-      return AlertTriangle
+      return ExclamationTriangleIcon
     case 'momentum':
-      return Zap
+      return BoltIcon
     default:
-      return Info
+      return InformationCircleIcon
   }
 }
 
@@ -39,6 +46,9 @@ export function NotificationToast() {
 
   const Icon = getNotificationIcon(latestNotification.type)
   const borderColor = getNotificationBorder(latestNotification.type)
+  
+  const match = mockMatches.find(m => m.id === latestNotification.matchId)
+  const matchName = match ? `${match.homeTeam.name} vs ${match.awayTeam.name}` : 'Bundesliga'
 
   const handleDismiss = () => {
     markAsRead(latestNotification.id)
@@ -49,7 +59,7 @@ export function NotificationToast() {
     <div className="fixed bottom-4 right-4 z-50 notification-enter">
       <div
         className={cn(
-          'w-80 rounded-lg border border-border bg-card shadow-2xl',
+          'w-96 rounded-xl border border-border bg-card shadow-2xl transition-all duration-300',
           'border-l-4',
           borderColor
         )}
@@ -61,19 +71,28 @@ export function NotificationToast() {
             </div>
             <div className="flex-1 space-y-1">
               <div className="flex items-start justify-between">
-                <p className="text-sm font-semibold text-primary">
-                  {latestNotification.title}
-                </p>
+                <div className="flex flex-col gap-2">
+                  {match && (
+                    <div className="flex items-center gap-1.5 pt-0.5">
+                      <img src={match.homeTeam.logo} alt="" className="h-7 w-7 object-contain" />
+                      <span className="text-[10px] font-black text-primary/40 italic">VS</span>
+                      <img src={match.awayTeam.logo} alt="" className="h-7 w-7 object-contain" />
+                    </div>
+                  )}
+                  <p className="text-base font-bold text-foreground tracking-tight">
+                    {latestNotification.title}
+                  </p>
+                </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   className="h-6 w-6 -mt-1 -mr-1 text-muted-foreground hover:text-foreground"
                   onClick={handleDismiss}
                 >
-                  <X className="h-4 w-4" />
+                  <XMarkIcon className="h-4 w-4" />
                 </Button>
               </div>
-              <p className="text-sm text-muted-foreground line-clamp-2">
+              <p className="text-sm text-foreground/80 leading-relaxed">
                 {latestNotification.message}
               </p>
               {latestNotification.confidence && (

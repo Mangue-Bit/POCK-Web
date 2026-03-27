@@ -2,8 +2,8 @@ import * as React from 'react'
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
-  MoreHorizontalIcon,
-} from 'lucide-react'
+  EllipsisHorizontalIcon as MoreHorizontalIcon,
+} from '@heroicons/react/24/outline'
 
 import { cn } from '@/lib/utils'
 import { Button, buttonVariants } from '@/components/ui/button'

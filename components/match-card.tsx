@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Clock, Radio } from 'lucide-react'
+import { ClockIcon, SignalIcon } from '@heroicons/react/24/outline'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
@@ -59,7 +59,7 @@ export function MatchCard({ match }: MatchCardProps) {
               </Badge>
             </div>
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Clock className="h-3 w-3" />
+              <ClockIcon className="h-3 w-3" />
               <span>Rodada {match.round}</span>
             </div>
           </div>
@@ -101,7 +101,7 @@ export function MatchCard({ match }: MatchCardProps) {
               </div>
               {isLive && (
                 <div className="flex items-center gap-1 text-xs text-primary">
-                  <Radio className="h-3 w-3 animate-pulse-live" />
+                  <SignalIcon className="h-3 w-3 animate-pulse" /> {/* Replaced Radio with SignalIcon and updated class */}
                   <span>Ao Vivo</span>
                 </div>
               )}

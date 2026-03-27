@@ -1,6 +1,6 @@
 'use client'
 
-import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
+import { ArrowTrendingUpIcon, ArrowTrendingDownIcon, MinusIcon } from '@heroicons/react/20/solid'
 import { cn } from '@/lib/utils'
 import type { Odds } from '@/lib/types'
 
@@ -37,9 +37,9 @@ function OddCard({ label, value, trend = 'neutral', highlight = false }: OddCard
         >
           {value.toFixed(2)}
         </span>
-        {trend === 'up' && <TrendingUp className="h-3 w-3 text-primary" />}
-        {trend === 'down' && <TrendingDown className="h-3 w-3 text-destructive" />}
-        {trend === 'neutral' && <Minus className="h-3 w-3 text-muted-foreground" />}
+        {trend === 'up' && <ArrowTrendingUpIcon className="h-3 w-3 text-primary" />}
+        {trend === 'down' && <ArrowTrendingDownIcon className="h-3 w-3 text-destructive" />}
+        {trend === 'neutral' && <MinusIcon className="h-3 w-3 text-muted-foreground" />}
       </div>
     </div>
   )

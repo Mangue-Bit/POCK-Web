@@ -1,158 +1,259 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { Zap, X, Timer, TrendingUp, AlertCircle } from 'lucide-react'
+import { 
+  BoltIcon, 
+  XMarkIcon, 
+  ArrowTrendingUpIcon, 
+  ExclamationCircleIcon, 
+  FlagIcon, 
+  NoSymbolIcon, 
+  FireIcon 
+} from '@heroicons/react/24/solid'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog"
 import { useQte } from '@/lib/qte-context'
 import { cn } from '@/lib/utils'
+import { mockMatches } from '@/lib/mock-data'
 
 export function BettingQte() {
   const { activeQte, dismissQte } = useQte()
-  const [timeLeft, setTimeLeft] = useState(0)
-  const [isExiting, setIsExiting] = useState(false)
+  const [timeLeft, setTimeLeft] = useState<number | null>(null)
 
   useEffect(() => {
     if (activeQte) {
       setTimeLeft(activeQte.duration)
-      setIsExiting(false)
       
       const timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 0.1) {
-            clearInterval(timer)
-            handleDismiss()
-            return 0
-          }
-          return prev - 0.1
-        })
+        setTimeLeft((prev) => (prev !== null ? Math.max(0, prev - 0.1) : null))
       }, 100)
 
       return () => clearInterval(timer)
     }
   }, [activeQte])
 
+  // Handle auto-dismiss when time reaches zero
+  useEffect(() => {
+    if (activeQte && timeLeft !== null && timeLeft <= 0) {
+      handleDismiss()
+    }
+  }, [timeLeft, activeQte])
+
   const handleDismiss = () => {
-    setIsExiting(true)
-    setTimeout(() => {
-      dismissQte()
-      setIsExiting(false)
-    }, 300)
+    setTimeout(() => dismissQte(), 0)
   }
 
-  if (!activeQte) return null
+  if (!activeQte || timeLeft === null) return null
 
   const progress = (timeLeft / activeQte.duration) * 100
-  const isGoal = activeQte.type === 'goal'
+  
+  const getQteStyles = (type: string) => {
+    switch (type) {
+      case 'goal':
+        return { 
+          color: 'bg-primary', 
+          foreground: 'text-primary-foreground', 
+          bg: 'bg-primary/5', 
+          icon: BoltIcon 
+        }
+      case 'card':
+        return { 
+          color: 'bg-orange-500', 
+          foreground: 'text-white', 
+          bg: 'bg-orange-500/10', 
+          icon: ExclamationCircleIcon 
+        }
+      case 'corner':
+        return { 
+          color: 'bg-blue-500', 
+          foreground: 'text-white', 
+          bg: 'bg-blue-500/10', 
+          icon: FlagIcon 
+        }
+      case 'foul':
+        return { 
+          color: 'bg-destructive', 
+          foreground: 'text-destructive-foreground', 
+          bg: 'bg-destructive/10', 
+          icon: NoSymbolIcon 
+        }
+      default:
+        return { 
+          color: 'bg-primary', 
+          foreground: 'text-primary-foreground', 
+          bg: 'bg-primary/5', 
+          icon: BoltIcon 
+        }
+    }
+  }
+
+  const styles = getQteStyles(activeQte.type)
+  const Icon = styles.icon
+  
+  const match = mockMatches.find(m => m.id === activeQte.matchId)
 
   return (
-    <div 
-      className={cn(
-        "fixed bottom-4 left-4 z-50 w-80 overflow-hidden rounded-xl border border-border bg-card shadow-2xl transition-all duration-300",
-        isExiting ? "qte-exit" : "qte-enter",
-        !activeQte && "pointer-events-none"
-      )}
-    >
-      {/* Header with Background Glow */}
-      <div className={cn(
-        "relative p-4 pb-2",
-        isGoal ? "bg-primary/10" : "bg-warning/10"
-      )}>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-full animate-pulse",
-              isGoal ? "bg-primary text-primary-foreground" : "bg-warning text-warning-foreground"
-            )}>
-              <Zap className="h-4 w-4 fill-current" />
+    <Dialog open={!!activeQte} onOpenChange={(open) => {
+      if (!open && activeQte) {
+        handleDismiss()
+      }
+    }}>
+      <DialogContent 
+        className="p-0 overflow-hidden border-none sm:max-w-[750px] shadow-[0_0_50px_rgba(0,0,0,0.5)]"
+        showCloseButton={false}
+      >
+        <div className={cn(
+          "w-full transition-all duration-300 bg-card",
+          !activeQte && "pointer-events-none"
+        )}>
+          {/* Header with Background Glow */}
+          <div className={cn(
+            "relative p-6 pb-4 border-b border-border/50",
+            styles.bg
+          )}>
+            <div className="flex items-center">
+              <div className="flex items-center justify-start w-full gap-8 py-2">
+                <div className="flex items-center gap-4">
+                  <div className={cn(
+                    "flex h-12 w-12 items-center justify-center rounded-full animate-pulse shadow-lg",
+                    styles.color,
+                    styles.foreground
+                  )}>
+                    <Icon className="h-6 w-6 fill-current" />
+                  </div>
+                  <DialogHeader className="flex flex-col items-start gap-0">
+                    <DialogTitle className="text-4xl font-black uppercase tracking-tighter text-foreground leading-none">
+                      {activeQte.title}
+                    </DialogTitle>
+                  </DialogHeader>
+                </div>
+
+                <div className="h-10 w-px bg-border/50 hidden sm:block" />
+
+                {match && (
+                  <div className="flex items-center gap-4">
+                    <img src={match.homeTeam.logo} alt="" className="h-12 w-12 object-contain drop-shadow-md" />
+                    <span className="text-lg font-black text-primary/30 italic">VS</span>
+                    <img src={match.awayTeam.logo} alt="" className="h-12 w-12 object-contain drop-shadow-md" />
+                  </div>
+                )}
+              </div>
+              <button 
+                onClick={handleDismiss}
+                className="absolute top-4 right-4 rounded-full p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
+              >
+                <XMarkIcon className="h-4 w-4" />
+              </button>
             </div>
-            <span className="text-sm font-bold uppercase tracking-wider text-foreground">
-              {activeQte.title}
-            </span>
           </div>
-          <button 
-            onClick={handleDismiss}
-            className="rounded-full p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      </div>
 
-      <div className="space-y-3 p-4 pt-2">
-        <p className="text-sm text-foreground/90 leading-relaxed font-medium">
-          {activeQte.message}
-        </p>
+          <div className="space-y-6 p-6 pt-4">
+            <DialogDescription className="text-lg text-foreground/90 leading-snug font-bold border-none">
+              {activeQte.message}
+            </DialogDescription>
 
-        {/* Confidence Meter */}
-        <div className="flex items-center gap-2">
-          <div className="flex flex-1 items-center gap-1.5">
-            <TrendingUp className="h-3.5 w-3.5 text-primary" />
-            <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary">
-              <div 
-                className="h-full bg-primary transition-all duration-500"
-                style={{ width: `${activeQte.confidence}%` }}
-              />
-            </div>
-          </div>
-          <span className="text-[10px] font-bold text-primary">
-            {activeQte.confidence}% CONF
-          </span>
-        </div>
-
-        {/* Actions */}
-        <div className="grid gap-2">
-          {activeQte.actions.map((action, idx) => (
-            <Button
-              key={idx}
-              size="sm"
-              className={cn(
-                "group relative h-10 w-full overflow-hidden font-bold transition-all hover:scale-[1.02] active:scale-[0.98]",
-                isGoal ? "bg-primary text-primary-foreground" : "bg-warning text-warning-foreground"
-              )}
-              onClick={() => {
-                console.log('Bet placed:', action.action)
-                handleDismiss()
-              }}
-            >
-              <span className="relative z-10 flex items-center justify-between w-full px-2">
-                <span>{action.label}</span>
-                <span className="rounded bg-black/20 px-1.5 py-0.5 text-xs">
-                  @{action.odds?.toFixed(2)}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <ArrowTrendingUpIcon className="h-4 w-4 text-primary" />
+                  <span className="text-xs font-black uppercase tracking-widest text-primary">
+                    Nível de Confiança
+                  </span>
+                </div>
+                <span className="text-sm font-black text-primary">
+                  {activeQte.confidence}%
                 </span>
-              </span>
-              <div className="absolute inset-0 translate-x-[-100%] bg-white/20 transition-transform group-hover:translate-x-0 duration-300" />
-            </Button>
-          ))}
-        </div>
+              </div>
+              <div className="h-3 w-full overflow-hidden rounded-full bg-secondary">
+                <div 
+                  className="h-full bg-primary transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(var(--primary),0.5)]"
+                  style={{ width: `${activeQte.confidence}%` }}
+                />
+              </div>
+            </div>
 
-        {/* Countdown Bar */}
-        <div className="space-y-1">
-          <div className="flex items-center justify-between text-[10px] uppercase tracking-tighter text-muted-foreground font-bold">
-            <span className="flex items-center gap-1">
-              <Timer className="h-3 w-3" />
-              Tempo Restante
-            </span>
-            <span>{timeLeft.toFixed(1)}s</span>
-          </div>
-          <div className="h-1 w-full overflow-hidden rounded-full bg-secondary">
-            <div 
-              className={cn(
-                "h-full transition-all duration-100 ease-linear",
-                timeLeft < 3 ? "bg-destructive" : isGoal ? "bg-primary" : "bg-warning"
-              )}
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-      </div>
+            <div className="grid gap-3">
+              {activeQte.actions.map((action, idx) => (
+                <Button
+                  key={idx}
+                  size="lg"
+                  className={cn(
+                    "group relative h-16 w-full overflow-hidden text-lg font-black transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl",
+                    styles.color,
+                    styles.foreground
+                  )}
+                  onClick={() => {
+                    console.log('Bet placed:', action.action)
+                    handleDismiss()
+                  }}
+                >
+                  <span className="relative z-10 flex items-center justify-between w-full px-4">
+                    <span>{action.label}</span>
+                    <span className="rounded-lg bg-black/30 px-3 py-1 text-sm font-black backdrop-blur-sm">
+                      @{action.odds?.toFixed(2)}
+                    </span>
+                  </span>
+                  <div className="absolute inset-0 translate-x-[-100%] bg-white/20 transition-transform group-hover:translate-x-0 duration-500" />
+                </Button>
+              ))}
+            </div>
 
-      {/* Profile specific badge */}
-      <div className="bg-secondary/50 px-4 py-1.5">
-        <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase">
-          <AlertCircle className="h-3 w-3" />
-          Sugestão Baseada no seu perfil
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-1 text-[10px] font-black uppercase text-secondary-foreground/60 tracking-widest">
+                  <FireIcon className="h-3 w-3 text-orange-500 animate-pulse" />
+                  Tempo Restante
+                </div>
+                <span className="text-xs font-black tabular-nums text-foreground">{timeLeft.toFixed(1)}s</span>
+              </div>
+              <div className="relative h-2.5 w-full overflow-visible rounded-full bg-secondary/30">
+                <div 
+                  className="h-full rounded-full transition-all duration-100 ease-linear shadow-[0_0_15px_rgba(249,115,22,0.5)]"
+                  style={{ 
+                    width: `${progress}%`,
+                    background: 'linear-gradient(90deg, #F97316 0%, #EA580C 50%, #DC2626 100%)',
+                    boxShadow: 'inset 0 0 10px rgba(0,0,0,0.2)'
+                  }}
+                />
+                {/* Burning Spark/Flame at the edge */}
+                <div 
+                  className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center transition-all duration-100 ease-linear"
+                  style={{ 
+                    left: `${progress}%`,
+                    transform: 'translate(-50%, -50%)',
+                    filter: 'drop-shadow(0 0 10px #F97316)'
+                  }}
+                >
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-orange-500 rounded-full blur-[8px] animate-ping opacity-50" />
+                    <FireIcon className="h-6 w-6 text-orange-400 fill-orange-500 animate-bounce transition-transform duration-75" />
+                    <div className="absolute top-0 -left-1 h-1.5 w-1.5 bg-yellow-300 rounded-full blur-[1px] animate-pulse" />
+                  </div>
+                </div>
+                {/* Smoke/Burn trail */}
+                <div 
+                  className="absolute top-0 bottom-0 left-0 bg-black/10 blur-[2px] transition-all duration-100 ease-linear"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            </div>
+            
+            {/* Profile specific badge */}
+            <div className="rounded-lg bg-secondary/50 px-4 py-2 border border-border/50">
+              <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase">
+                <ExclamationCircleIcon className="h-4 w-4 text-warning" />
+                Sugestão baseada no seu perfil
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   )
 }

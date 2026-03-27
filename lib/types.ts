@@ -102,10 +102,10 @@ export interface QteAction {
 export interface QteEvent {
   id: string
   matchId: string
-  type: 'goal' | 'card'
+  type: 'goal' | 'card' | 'corner' | 'foul'
   title: string
   message: string
-  duration: number // in seconds
+  duration: number
   confidence: number
   actions: QteAction[]
   timestamp: Date

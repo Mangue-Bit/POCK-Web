@@ -2,7 +2,8 @@
 
 import { use } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Radio, Clock, Star, StarOff } from 'lucide-react'
+import { ArrowLeftIcon, SignalIcon, ClockIcon, StarIcon } from '@heroicons/react/24/outline'
+import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -47,7 +48,7 @@ export default function MatchPage({ params }: PageProps) {
         <h1 className="text-2xl font-bold text-foreground">Jogo não encontrado</h1>
         <Link href="/">
           <Button variant="outline" className="mt-4 gap-2">
-            <ArrowLeft className="h-4 w-4" />
+            <ArrowLeftIcon className="h-4 w-4" />
             Voltar
           </Button>
         </Link>
@@ -62,7 +63,7 @@ export default function MatchPage({ params }: PageProps) {
       {/* Back Button */}
       <Link href="/" className="mb-6 inline-flex">
         <Button variant="ghost" className="gap-2 text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeftIcon className="h-4 w-4" />
           Voltar aos Jogos
         </Button>
       </Link>
@@ -91,14 +92,14 @@ export default function MatchPage({ params }: PageProps) {
               </Badge>
               {isLive && (
                 <div className="flex items-center gap-1 text-sm text-primary">
-                  <Radio className="h-4 w-4 animate-pulse-live" />
+                  <SignalIcon className="h-4 w-4 animate-pulse" />
                   <span>Ao Vivo</span>
                 </div>
               )}
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                <Clock className="h-4 w-4" />
+                <ClockIcon className="h-4 w-4" />
                 <span>Bundesliga - Rodada {match.round}</span>
               </div>
               <Button
@@ -114,12 +115,12 @@ export default function MatchPage({ params }: PageProps) {
               >
                 {isFollowing ? (
                   <>
-                    <Star className="h-4 w-4 fill-current" />
+                    <StarIconSolid className="h-4 w-4 text-primary" />
                     Seguindo
                   </>
                 ) : (
                   <>
-                    <StarOff className="h-4 w-4" />
+                    <StarIcon className="h-4 w-4" />
                     Seguir
                   </>
                 )}

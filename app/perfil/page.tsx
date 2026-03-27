@@ -2,18 +2,18 @@
 
 import { useState } from 'react'
 import {
-  User,
-  Mail,
-  Shield,
-  Heart,
-  TrendingUp,
-  AlertTriangle,
-  Target,
-  Calendar,
-  Edit2,
-  Check,
-  X,
-} from 'lucide-react'
+  UserIcon,
+  EnvelopeIcon,
+  ShieldCheckIcon,
+  HeartIcon,
+  ArrowTrendingUpIcon,
+  ExclamationTriangleIcon,
+  RocketLaunchIcon,
+  CalendarIcon,
+  PencilIcon,
+  CheckIcon,
+  XMarkIcon
+} from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -35,28 +35,28 @@ const bettingProfiles: {
   value: BettingProfile
   label: string
   description: string
-  icon: typeof TrendingUp
+  icon: typeof ArrowTrendingUpIcon
   color: string
 }[] = [
   {
     value: 'conservador',
     label: 'Conservador',
     description: 'Prefere apostas seguras com odds menores',
-    icon: Shield,
+    icon: ShieldCheckIcon,
     color: 'text-info',
   },
   {
     value: 'moderado',
     label: 'Moderado',
     description: 'Equilibra risco e retorno nas apostas',
-    icon: Target,
+    icon: RocketLaunchIcon,
     color: 'text-primary',
   },
   {
     value: 'agressivo',
     label: 'Agressivo',
     description: 'Busca odds altas mesmo com maior risco',
-    icon: TrendingUp,
+    icon: ArrowTrendingUpIcon,
     color: 'text-warning',
   },
 ]
@@ -96,7 +96,7 @@ export default function ProfilePage() {
         <Card className="border-border bg-card">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2 text-foreground">
-              <User className="h-5 w-5 text-primary" />
+              <UserIcon className="h-5 w-5 text-primary" />
               Informações Básicas
             </CardTitle>
             {!isEditing ? (
@@ -106,7 +106,7 @@ export default function ProfilePage() {
                 onClick={() => setIsEditing(true)}
                 className="gap-2 text-muted-foreground hover:text-foreground"
               >
-                <Edit2 className="h-4 w-4" />
+                <PencilIcon className="h-4 w-4" />
                 Editar
               </Button>
             ) : (
@@ -117,14 +117,14 @@ export default function ProfilePage() {
                   onClick={handleCancel}
                   className="text-muted-foreground hover:text-foreground"
                 >
-                  <X className="h-4 w-4" />
+                  <XMarkIcon className="h-4 w-4" />
                 </Button>
                 <Button
                   size="sm"
                   onClick={handleSave}
                   className="gap-2 bg-primary text-primary-foreground"
                 >
-                  <Check className="h-4 w-4" />
+                  <CheckIcon className="h-4 w-4" />
                   Salvar
                 </Button>
               </div>
@@ -165,7 +165,7 @@ export default function ProfilePage() {
             {/* Email */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2 text-muted-foreground">
-                <Mail className="h-4 w-4" />
+                <EnvelopeIcon className="h-4 w-4" />
                 Email
               </Label>
               {isEditing ? (
@@ -183,7 +183,7 @@ export default function ProfilePage() {
             {/* Member Since */}
             <div className="space-y-2">
               <Label className="flex items-center gap-2 text-muted-foreground">
-                <Calendar className="h-4 w-4" />
+                <CalendarIcon className="h-4 w-4" />
                 Data de Cadastro
               </Label>
               <p className="text-foreground">
@@ -201,7 +201,7 @@ export default function ProfilePage() {
         <Card className="border-border bg-card">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground">
-              <Heart className="h-5 w-5 text-destructive" />
+              <HeartIcon className="h-5 w-5 text-destructive" />
               Time do Coração
             </CardTitle>
           </CardHeader>
@@ -209,14 +209,12 @@ export default function ProfilePage() {
             <div className="flex items-center gap-4 rounded-lg border border-border bg-secondary/30 p-4">
               {favoriteTeam && (
                 <>
-                  <div
-                    className="flex h-16 w-16 items-center justify-center rounded-full text-xl font-bold"
-                    style={{
-                      background: `linear-gradient(135deg, ${favoriteTeam.primaryColor}20, ${favoriteTeam.primaryColor}40)`,
-                      color: favoriteTeam.primaryColor,
-                    }}
-                  >
-                    {favoriteTeam.shortName}
+                  <div className="flex h-16 w-16 items-center justify-center rounded-xl bg-background border border-border shadow-sm overflow-hidden p-2">
+                    <img 
+                      src={favoriteTeam.logo} 
+                      alt="" 
+                      className="h-full w-full object-contain drop-shadow-sm" 
+                    />
                   </div>
                   <div>
                     <p className="font-semibold text-foreground">
@@ -244,7 +242,12 @@ export default function ProfilePage() {
                       value={team.id}
                       className="text-foreground"
                     >
-                      {team.name}
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-6 w-6 items-center justify-center rounded-sm bg-muted/50 p-1">
+                          <img src={team.logo} alt="" className="h-full w-full object-contain" />
+                        </div>
+                        <span className="font-medium">{team.name}</span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -257,7 +260,7 @@ export default function ProfilePage() {
         <Card className="border-border bg-card md:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground">
-              <Target className="h-5 w-5 text-primary" />
+              <RocketLaunchIcon className="h-5 w-5 text-primary" />
               Perfil de Apostador
             </CardTitle>
           </CardHeader>
@@ -318,7 +321,7 @@ export default function ProfilePage() {
             {currentProfile && (
               <div className="mt-6 rounded-lg border border-border bg-secondary/30 p-4">
                 <div className="flex items-start gap-3">
-                  <AlertTriangle className="mt-0.5 h-5 w-5 text-warning" />
+                  <ExclamationTriangleIcon className="mt-0.5 h-5 w-5 text-warning" />
                   <div>
                     <p className="font-medium text-foreground">
                       Configuração de Insights
@@ -342,7 +345,7 @@ export default function ProfilePage() {
         <Card className="border-border bg-card md:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-foreground">
-              <TrendingUp className="h-5 w-5 text-primary" />
+              <ArrowTrendingUpIcon className="h-5 w-5 text-primary" />
               Estatísticas de Uso
             </CardTitle>
           </CardHeader>

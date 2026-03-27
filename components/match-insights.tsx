@@ -1,6 +1,6 @@
 'use client'
 
-import { Brain, TrendingUp, ChevronRight } from 'lucide-react'
+import { CpuChipIcon, ArrowTrendingUpIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
 import { Progress } from '@/components/ui/progress'
 import { cn } from '@/lib/utils'
 import type { MatchInsight } from '@/lib/types'
@@ -59,7 +59,7 @@ export function MatchInsights({ insight }: MatchInsightsProps) {
       {/* Main Prediction */}
       <div className="rounded-lg border border-primary/20 bg-primary/5 p-4">
         <div className="mb-3 flex items-center gap-2">
-          <Brain className="h-5 w-5 text-primary" />
+          <CpuChipIcon className="h-5 w-5 text-primary" />
           <span className="text-sm font-medium text-primary">Previsão do Modelo</span>
         </div>
         <p className="mb-4 text-lg font-semibold text-foreground">
@@ -77,7 +77,7 @@ export function MatchInsights({ insight }: MatchInsightsProps) {
       {/* SHAP Features */}
       <div>
         <div className="mb-4 flex items-center gap-2">
-          <TrendingUp className="h-5 w-5 text-muted-foreground" />
+          <ArrowTrendingUpIcon className="h-5 w-5 text-muted-foreground" />
           <h4 className="text-sm font-medium text-foreground">
             Fatores de Decisão (SHAP)
           </h4>
@@ -100,7 +100,7 @@ export function MatchInsights({ insight }: MatchInsightsProps) {
           <span className="text-sm text-muted-foreground">
             Como o modelo chegou a essa conclusão?
           </span>
-          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          <ChevronRightIcon className="h-4 w-4 text-muted-foreground" />
         </button>
       </div>
     </div>
