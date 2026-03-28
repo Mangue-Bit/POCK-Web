@@ -31,14 +31,14 @@ function buildTitle(n: ApiNotification): string {
   switch (n.type) {
     case 'goal_alert':
       return n.triggered_by_qte && n.qte_events?.[0]?.team_name
-        ? `${n.qte_events[0].team_name} — Chance de Gol`
-        : 'Alta Prob. de Gol'
+        ? `GOL À VISTA: ${n.qte_events[0].team_name}! ⚽`
+        : 'GOL À VISTA! ⚽'
     case 'pressure_alert':
-      return 'Surge Ofensivo Detectado'
+      return 'PRESSÃO TOTAL 🔥'
     case 'chaos_alert':
-      return 'Caos no Fim de Jogo'
+      return 'FINAL PERIGOSO ⚠️'
     default:
-      return 'Alerta de Partida'
+      return 'ALERTA DE JOGO'
   }
 }
 

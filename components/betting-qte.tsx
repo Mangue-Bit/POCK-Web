@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/dialog'
 import { useQte } from '@/lib/qte-context'
 import { cn } from '@/lib/utils'
+import { parseScore } from '@/lib/api'
 import type { LiveQteEvent } from '@/lib/types'
 
 // ─── Color maps ────────────────────────────────────────────────
@@ -144,7 +145,7 @@ export function BettingQte() {
                 <span className="text-lg md:text-xl font-black italic tracking-tighter text-primary leading-none">
                   {confidencePct}%
                 </span>
-                <span className="text-[7px] md:text-[8px] font-black uppercase tracking-widest text-neutral-500 leading-none">Confiança</span>
+                <span className="text-[7px] md:text-[8px] font-black uppercase tracking-widest text-neutral-500 leading-none">Chance IA</span>
               </div>
 
               {/* Match & Content */}
@@ -206,7 +207,7 @@ export function BettingQte() {
             {/* Header */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <DialogTitle className="text-lg md:text-xl font-black uppercase tracking-tight italic">QUICK BET</DialogTitle>
+                <DialogTitle className="text-lg md:text-xl font-black uppercase tracking-tight italic">Quick Bet</DialogTitle>
                 <div className="hidden min-[400px]:flex ml-1 md:ml-2 items-center gap-1.5 rounded-full bg-primary/10 border border-primary/30 px-2 py-0.5">
                   <div className="h-1 w-1 md:h-1.5 md:w-1.5 rounded-full bg-primary shadow-[0_0_5px_theme(colors.primary)]" />
                   <span className="text-[8px] md:text-[10px] font-black text-primary uppercase tracking-wider">LIVE</span>
@@ -239,9 +240,9 @@ export function BettingQte() {
 
               <div className="flex flex-col items-center gap-1">
                 <div className="flex items-center gap-3 rounded-xl bg-neutral-800/80 px-4 py-2 text-2xl font-black italic shadow-inner">
-                  <span className="text-white">{activeQte.score?.split(':')[0] ?? '0'}</span>
+                  <span className="text-white">{parseScore(activeQte.score ?? '').home}</span>
                   <span className="text-neutral-600">—</span>
-                  <span className="text-white">{activeQte.score?.split(':')[1] ?? '0'}</span>
+                  <span className="text-white">{parseScore(activeQte.score ?? '').away}</span>
                 </div>
                 <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">{activeQte.minute}&apos;</span>
               </div>
@@ -283,26 +284,26 @@ export function BettingQte() {
                   <div className="text-5xl md:text-6xl font-black italic tracking-tighter bg-gradient-to-br from-primary to-emerald-400 bg-clip-text text-transparent leading-none">
                     {confidencePct}%
                   </div>
-                  <div className="text-[8px] md:text-[10px] font-black uppercase text-neutral-500 tracking-[0.2em]">PROBABILIDADE</div>
+                  <div className="text-[8px] md:text-[10px] font-black uppercase text-neutral-500 tracking-[0.2em]">CERTEZA DA IA</div>
                 </div>
 
                 <div className="flex-1 w-full space-y-1.5 md:space-y-2">
                   <div className="flex items-center justify-between text-[10px] md:text-xs font-bold">
-                    <span className="text-neutral-500 uppercase tracking-wider">TIPO</span>
+                    <span className="text-neutral-500 uppercase tracking-wider">TIPO DE LANCE</span>
                     <span className="text-neutral-200">
                       {activeQte.apiType === 'GOAL_IMMINENT'
-                        ? '🔴 Gol Iminente'
+                        ? '🔴 Gol a Caminho'
                         : activeQte.apiType === 'OFFENSIVE_SURGE'
-                        ? '🟠 Surge Ofensivo'
-                        : '🟡 Caos Final'}
+                        ? '🟠 Time no Ataque'
+                        : '🟡 Jogo Imprevisível'}
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-[10px] md:text-xs font-bold">
-                    <span className="text-neutral-500 uppercase tracking-wider">GOL PROB</span>
+                    <span className="text-neutral-500 uppercase tracking-wider">CHANCE DE GOL</span>
                     <span className="text-primary">{Math.round(activeQte.goalProb * 100)}%</span>
                   </div>
                   <div className="flex items-center justify-between text-[10px] md:text-xs font-bold">
-                    <span className="text-neutral-500 uppercase tracking-wider">MINUTO</span>
+                    <span className="text-neutral-500 uppercase tracking-wider">TEMPO</span>
                     <span className="text-neutral-200">{activeQte.minute}&apos;</span>
                   </div>
                 </div>
@@ -313,7 +314,7 @@ export function BettingQte() {
             {activeQte.reasons.length > 0 && (
               <div className="space-y-3 md:space-y-4">
                 <h4 className="text-[9px] md:text-[10px] font-black uppercase text-neutral-500 tracking-[0.2em]">
-                  POR QUE ESTE ALERTA FOI GERADO
+                  POR QUE A IA SELECIONOU ESSE LANCE?
                 </h4>
                 <div className="space-y-3 md:space-y-4">
                   {activeQte.reasons.slice(0, 3).map((reason, i) => (

@@ -1,30 +1,22 @@
 // ────────────────────────────────────────────────────────────────
-// EDScript API Client
-// Base URL: http://127.0.0.1:8000   CORS enabled for all origins
+// POCK Mock Simulation Engine (Presentation Mode - Stable Notifs)
 // ────────────────────────────────────────────────────────────────
-
-const BASE = 'http://127.0.0.1:8000'
-
-// ─── Raw API shapes ────────────────────────────────────────────
 
 export interface ApiMatch {
   match_id: string
   minute: number
-  score: string          // "1:1"
+  score: string
   home: string
   away: string
   league: string
+  homeLogo?: string
+  awayLogo?: string
   stats: {
     attacks: [number, number]
     dangerous_attacks: [number, number]
     possession: [number, number]
     shots_on_target: [number, number]
   }
-}
-
-export interface ApiMatchesResponse {
-  count: number
-  data: ApiMatch[]
 }
 
 export interface ApiQteEvent {
@@ -65,11 +57,23 @@ export interface ApiInference {
       goal_prob: number
       corner_prob: number
       pressure_index: number
+      shap_reasons?: Array<{
+        label: string
+        direction: string
+        contribution_pct: string
+      }>
     }
   }
   shap: {
+    predict_reasons: Array<{
+      label: string
+      direction: string
+      contribution_pct: string
+    }>
+    predict_has_reasons: boolean
     expanded?: {
       available: boolean
+      error: string | null
       reasons: Array<{
         label: string
         direction: string
@@ -84,7 +88,7 @@ export interface ApiInference {
 }
 
 export interface ApiNotification {
-  id?: string
+  id: string
   type: 'goal_alert' | 'pressure_alert' | 'chaos_alert' | 'match_alert'
   message: string
   confidence: number
@@ -92,75 +96,234 @@ export interface ApiNotification {
   match_id: string
   triggered_by_qte: boolean
   triggered_by_score: boolean
-  qte_events: ApiQteEvent[]
-  probabilities?: {
-    goal_prob?: number
-    corner_prob?: number
-    pressure_index?: number
-  }
+  qte_events?: ApiQteEvent[]
 }
 
-export interface ApiNotificationsResponse {
-  notifications: ApiNotification[]
+// ─── Internal Mock State ────────────────────────────────────────
+
+const MOCK_START_TIME = Date.now()
+
+function getMinute(offset = 0) {
+  const elapsedMinutes = Math.floor((Date.now() - MOCK_START_TIME) / (1000 * 10)) // 10s = 1 min
+  return Math.min(89, (23 + offset + elapsedMinutes) % 90)
 }
 
-// ─── Fetch helpers ─────────────────────────────────────────────
-
-async function get<T>(path: string): Promise<T> {
-  const res = await fetch(`${BASE}${path}`, { cache: 'no-store' })
-  if (!res.ok) throw new Error(`API ${path} → ${res.status}`)
-  return res.json() as Promise<T>
+function getMockMatches(): ApiMatch[] {
+  const min = getMinute()
+  return [
+    {
+      match_id: 'bay-dor',
+      minute: min,
+      score: min > 40 ? '1-0' : '0-0',
+      home: 'FC Bayern',
+      away: 'Borussia Dortmund',
+      league: 'Bundesliga',
+      homeLogo: '/teams/FC-Bayern.png',
+      awayLogo: '/teams/Borussia-Dortmund.png',
+      stats: {
+        attacks: [88, 72],
+        dangerous_attacks: [45, 31],
+        possession: [56, 44],
+        shots_on_target: [6, 4],
+      },
+    },
+    {
+      match_id: 'lev-rbl',
+      minute: getMinute(15),
+      score: '1-1',
+      home: 'Bayer Leverkusen',
+      away: 'RB Leipzig',
+      league: 'Bundesliga',
+      homeLogo: '/teams/Bayer-Leverkusen.png',
+      awayLogo: '/teams/RB-Leipzig.png',
+      stats: {
+        attacks: [110, 95],
+        dangerous_attacks: [62, 58],
+        possession: [52, 48],
+        shots_on_target: [9, 7],
+      },
+    },
+    {
+      match_id: 'stu-fra',
+      minute: getMinute(42),
+      score: '0-2',
+      home: 'VfB Stuttgart',
+      away: 'Eintracht Frankfurt',
+      league: 'Bundesliga',
+      homeLogo: '/teams/VfB-Stuttgart.png',
+      awayLogo: '/teams/Eintracht-Frontfurt.png',
+      stats: {
+        attacks: [45, 52],
+        dangerous_attacks: [22, 38],
+        possession: [48, 52],
+        shots_on_target: [2, 5],
+      },
+    },
+  ]
 }
 
-// ─── Public API ────────────────────────────────────────────────
+// ─── Public API (100% Mocked) ───────────────────────────────────
 
-/** GET /matches — returns live matches (only those >= 10 min) */
 export async function fetchMatches(): Promise<ApiMatch[]> {
-  const data = await get<ApiMatchesResponse>('/matches')
-  return data.data ?? []
+  return getMockMatches()
 }
 
-/**
- * GET /inference/{event_id}
- * Returns null if the match doesn't have a snapshot yet (404).
- */
+const lastTriggerTime: Record<string, number> = {}
+
 export async function fetchInference(
   eventId: string,
-  profile: 'moderate' | 'aggressive' | 'conservative' = 'moderate',
+  profile: 'moderate' | 'aggressive' | 'conservative' = 'moderate'
 ): Promise<ApiInference | null> {
-  try {
-    const res = await fetch(
-      `${BASE}/inference/${eventId}?profile=${profile}&shap_top_n=5`,
-      { cache: 'no-store' },
-    )
-    if (res.status === 404) return null
-    if (!res.ok) throw new Error(`inference ${eventId} → ${res.status}`)
-    return res.json() as Promise<ApiInference>
-  } catch {
-    return null
+  const match = getMockMatches().find(m => m.match_id === eventId)
+  if (!match) return null
+
+  const now = Date.now()
+  const lastTime = lastTriggerTime[eventId] ?? 0
+  const baseProb = 0.6 + (Math.random() * 0.12) 
+  
+  // Throttle QTE to only trigger once every 25s
+  const shouldTrigger = (now - lastTime > 25000) && (Math.random() < 0.3)
+  
+  if (shouldTrigger) {
+    lastTriggerTime[eventId] = now
+  }
+
+  const qteTypes: Array<ApiQteEvent['type']> = ['GOAL_IMMINENT', 'OFFENSIVE_SURGE', 'LATE_GAME_CHAOS']
+  const randomType = qteTypes[Math.floor(Math.random() * qteTypes.length)]
+
+  return {
+    snapshot_context: {
+      home: match.home,
+      away: match.away,
+      score: match.score,
+      minute: match.minute,
+      league: match.league,
+    },
+    decision: {
+      trigger: shouldTrigger,
+      triggered_by_score: false,
+      triggered_by_qte: shouldTrigger,
+      score: baseProb,
+      threshold: 0.60,
+    },
+    decision_engine: {
+      qte_events: shouldTrigger ? [{
+        type: randomType,
+        team_name: match.home,
+        team_side: 'home',
+        confidence: baseProb,
+        valid_for_seconds: 45,
+        reasons: [
+          `O ${match.home} está controlando o jogo com posse agressiva`,
+          'Houve um aumento claro nas finalizações de perigo',
+          'A defesa agressiva está dando sinais de superioridade'
+        ]
+      }] : [],
+      indicators: {
+        offensive_pressure: { home: 0.65, away: 0.34 },
+        momentum_index: 0.68,
+        game_openness: 0.55,
+        deltas: {},
+      },
+    },
+    model_outputs: {
+      model_predict: {
+        goal_prob: baseProb,
+        corner_prob: 0.45,
+        pressure_index: 0.68,
+        shap_reasons: [
+          { label: 'Volume de Ataque', direction: 'Aumenta Chance', contribution_pct: '+15%' },
+          { label: 'Posse Ofensiva', direction: 'Aumenta Chance', contribution_pct: '+10%' },
+        ]
+      },
+    },
+    shap: {
+      predict_has_reasons: true,
+      predict_reasons: [
+        { label: 'Domínio de campo', direction: 'Aumenta Chance', contribution_pct: '+12%' },
+      ],
+      expanded: {
+        available: true,
+        error: null,
+        reasons: [
+          { label: 'Domínio de campo', direction: 'Aumenta Chance', contribution_pct: '+12%' },
+          { label: 'Recuo adversário', direction: 'Aumenta Chance', contribution_pct: '+8%' },
+        ]
+      }
+    },
+    drift: null,
   }
 }
 
-/** GET /notifications?limit=20 */
+// Scripted notifications based on mock minutes
+const SCRIPTED_NOTIFICATIONS: Array<{ triggerMin: number; data: ApiNotification }> = [
+  {
+    triggerMin: 23,
+    data: {
+      id: 'notif-start',
+      type: 'match_alert',
+      message: 'Olá! Acompanhe os jogos da Bundesliga e receba insights em tempo real com nossa IA.',
+      confidence: 0.85,
+      timestamp: new Date(MOCK_START_TIME).toISOString(),
+      match_id: 'all',
+      triggered_by_qte: false,
+      triggered_by_score: false,
+    }
+  },
+  {
+    triggerMin: 28,
+    data: {
+      id: 'notif-goal-prob-bayern',
+      type: 'goal_alert',
+      message: 'Boa chance de gol para o Bayern! O time está pressionando e o volume de finalizações indica uma boa possibilidade de balançar as redes.',
+      confidence: 0.71,
+      timestamp: new Date(MOCK_START_TIME + 50000).toISOString(),
+      match_id: 'bay-dor',
+      triggered_by_qte: true,
+      triggered_by_score: false,
+    }
+  },
+  {
+    triggerMin: 35,
+    data: {
+      id: 'notif-lev-pressure',
+      type: 'pressure_alert',
+      message: 'O Leverkusen está com ótimo volume de jogo. Há uma boa possibilidade de escanteios nos próximos minutos devido à pressão constante.',
+      confidence: 0.68,
+      timestamp: new Date(MOCK_START_TIME + 120000).toISOString(),
+      match_id: 'lev-rbl',
+      triggered_by_qte: true,
+      triggered_by_score: false,
+    }
+  },
+  {
+    triggerMin: 55,
+    data: {
+      id: 'notif-stu-chaos',
+      type: 'chaos_alert',
+      message: 'Jogo muito aberto em Stuttgart. As falhas defensivas sugerem uma boa chance de gols para quem busca emoção no final da partida.',
+      confidence: 0.64,
+      timestamp: new Date(MOCK_START_TIME + 320000).toISOString(),
+      match_id: 'stu-fra',
+      triggered_by_qte: true,
+      triggered_by_score: false,
+    }
+  }
+]
+
 export async function fetchNotifications(limit = 20): Promise<ApiNotification[]> {
-  try {
-    const data = await get<ApiNotificationsResponse | ApiNotification[]>(
-      `/notifications?limit=${limit}`,
-    )
-    // Backend may return { notifications: [] } or directly []
-    if (Array.isArray(data)) return data
-    return (data as ApiNotificationsResponse).notifications ?? []
-  } catch {
-    return []
-  }
+  const currentMin = getMinute()
+  // Only return notifications whose trigger minute has passed
+  return SCRIPTED_NOTIFICATIONS
+    .filter(n => n.triggerMin <= currentMin)
+    .map(n => n.data)
+    .reverse() // Newest first
+    .slice(0, limit)
 }
 
-// ─── Parsing helpers ───────────────────────────────────────────
-
-/** "1:1" or "1-1" → { home: 1, away: 1 } — handles both separators */
+/** "1:1" or "1-1" → { home: 1, away: 1 } */
 export function parseScore(score: string): { home: number; away: number } {
   if (!score) return { home: 0, away: 0 }
-  // Try ':' first, then '-' (some BetsAPI responses use dashes)
   const sep = score.includes(':') ? ':' : '-'
   const [h, a] = score.split(sep).map(s => Number(s.trim()))
   return { home: isNaN(h) ? 0 : h, away: isNaN(a) ? 0 : a }

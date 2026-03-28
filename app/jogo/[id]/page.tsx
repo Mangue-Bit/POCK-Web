@@ -20,6 +20,7 @@ import { useUser } from '@/lib/user-context'
 import { useInference } from '@/hooks/use-inference'
 import { useLiveMatches } from '@/hooks/use-live-matches'
 import { cn } from '@/lib/utils'
+import { parseScore } from '@/lib/api'
 
 interface PageProps {
   params: Promise<{ id: string }>
@@ -106,9 +107,7 @@ export default function MatchPage({ params }: PageProps) {
   const minute = inference?.snapshot_context.minute ?? liveMatch?.minute ?? 0
   const league = inference?.snapshot_context.league ?? liveMatch?.league ?? ''
 
-  const scoreParts = score ? score.split(':') : ['0', '0']
-  const homeScore = parseInt(scoreParts[0] ?? '0', 10) || 0
-  const awayScore = parseInt(scoreParts[1] ?? '0', 10) || 0
+  const { home: homeScore, away: awayScore } = parseScore(score)
   const homeWinning = homeScore > awayScore
   const awayWinning = awayScore > homeScore
 
@@ -116,8 +115,21 @@ export default function MatchPage({ params }: PageProps) {
   const decision = inference?.decision
   const engine = inference?.decision_engine
   const model = inference?.model_outputs?.model_predict
-  const shap = inference?.shap?.expanded
   const drift = inference?.drift
+
+  // Try all SHAP sources in priority order:
+  // 1. shap.expanded.reasons (full SHAP)
+  // 2. shap.predict_reasons (compact version)
+  // 3. model_outputs.model_predict.shap_reasons (fallback)
+  const shapReasons =
+    (inference?.shap?.expanded?.reasons?.length ?? 0) > 0
+      ? inference!.shap.expanded!.reasons
+      : (inference?.shap?.predict_reasons?.length ?? 0) > 0
+      ? inference!.shap.predict_reasons
+      : (model?.shap_reasons?.length ?? 0) > 0
+      ? model!.shap_reasons!
+      : []
+  const shapAvailable = shapReasons.length > 0
 
   const stats = liveMatch?.stats
 
@@ -185,8 +197,12 @@ export default function MatchPage({ params }: PageProps) {
           <div className="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-8 md:py-10 gap-8 md:gap-4">
             {/* Home Team */}
             <div className="flex flex-row md:flex-col items-center gap-4 flex-1 w-full md:w-auto justify-center md:justify-start">
-              <div className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-secondary/40 border-2 border-white/5 flex items-center justify-center text-xl font-black text-foreground">
-                {getInitials(home)}
+              <div className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-secondary/40 border-2 border-white/5 flex items-center justify-center overflow-hidden">
+                {liveMatch?.homeLogo ? (
+                  <img src={liveMatch.homeLogo} alt={home} className="h-full w-full object-contain p-4" />
+                ) : (
+                  <span className="text-xl font-black text-foreground">{getInitials(home)}</span>
+                )}
               </div>
               <div className="text-left md:text-center w-full md:w-auto">
                 <h2 className="text-lg md:text-2xl font-black text-foreground uppercase italic tracking-tighter line-clamp-1">{home}</h2>
@@ -212,8 +228,12 @@ export default function MatchPage({ params }: PageProps) {
 
             {/* Away Team */}
             <div className="flex flex-row-reverse md:flex-col items-center gap-4 flex-1 w-full md:w-auto justify-center md:justify-start">
-              <div className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-secondary/40 border-2 border-white/5 flex items-center justify-center text-xl font-black text-foreground">
-                {getInitials(away)}
+              <div className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-secondary/40 border-2 border-white/5 flex items-center justify-center overflow-hidden">
+                {liveMatch?.awayLogo ? (
+                  <img src={liveMatch.awayLogo} alt={away} className="h-full w-full object-contain p-4" />
+                ) : (
+                  <span className="text-xl font-black text-foreground">{getInitials(away)}</span>
+                )}
               </div>
               <div className="text-right md:text-center w-full md:w-auto">
                 <h2 className="text-lg md:text-2xl font-black text-foreground uppercase italic tracking-tighter line-clamp-1">{away}</h2>
@@ -255,8 +275,8 @@ export default function MatchPage({ params }: PageProps) {
         <div className="overflow-x-auto pb-2 scrollbar-hide">
           <TabsList className="flex w-full min-w-[400px] h-12 bg-secondary/50 border border-white/5 p-1 rounded-xl">
             <TabsTrigger value="stats" className="flex-1 font-bold text-xs uppercase tracking-widest">Estatísticas</TabsTrigger>
-            <TabsTrigger value="analysis" className="flex-1 font-bold text-xs uppercase tracking-widest">Análise IA</TabsTrigger>
-            <TabsTrigger value="shap" className="flex-1 font-bold text-xs uppercase tracking-widest">Explicação</TabsTrigger>
+            <TabsTrigger value="analysis" className="flex-1 font-bold text-xs uppercase tracking-widest">Raio-X da IA</TabsTrigger>
+            <TabsTrigger value="shap" className="flex-1 font-bold text-xs uppercase tracking-widest">Por que a IA?</TabsTrigger>
           </TabsList>
         </div>
 
@@ -287,22 +307,22 @@ export default function MatchPage({ params }: PageProps) {
 
                   {engine?.indicators && (
                     <div className="mt-6 pt-5 border-t border-white/5 space-y-4">
-                      <h4 className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Indicadores de Pressão IA</h4>
-                      <PressureBar label={`Pressão Ofensiva — ${home}`} value={engine.indicators.offensive_pressure.home} />
-                      <PressureBar label={`Pressão Ofensiva — ${away}`} value={engine.indicators.offensive_pressure.away} />
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Controle do Jogo — Visão da IA</h4>
+                      <PressureBar label={`Pressão de Ataque — ${home}`} value={engine.indicators.offensive_pressure.home} />
+                      <PressureBar label={`Pressão de Ataque — ${away}`} value={engine.indicators.offensive_pressure.away} />
                       <div className="grid grid-cols-2 gap-3 pt-2">
                         <div className="rounded-xl bg-secondary/40 p-3 border border-white/5">
-                          <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Momentum</p>
+                          <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Quem está dominando</p>
                           <p className="text-sm font-black text-primary tabular-nums mt-0.5">
                             {engine.indicators.momentum_index > 0.5 ? home : away}
-                            <span className="text-[9px] text-neutral-500 ml-1 font-bold normal-case">dominando</span>
+                            <span className="text-[9px] text-neutral-500 ml-1 font-bold normal-case">no controle</span>
                           </p>
                         </div>
                         <div className="rounded-xl bg-secondary/40 p-3 border border-white/5">
-                          <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Abertura</p>
+                          <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Jogo Aberto</p>
                           <p className="text-sm font-black text-foreground tabular-nums mt-0.5">
                             {Math.round(engine.indicators.game_openness * 100)}%
-                            <span className="text-[9px] text-neutral-500 ml-1 font-bold normal-case">volatilidade</span>
+                            <span className="text-[9px] text-neutral-500 ml-1 font-bold normal-case">imprevisível</span>
                           </p>
                         </div>
                       </div>
@@ -316,16 +336,16 @@ export default function MatchPage({ params }: PageProps) {
               <Card className="border-border bg-card rounded-2xl overflow-hidden shadow-lg shadow-black/20">
                 <CardHeader className="border-b border-white/5 pb-4">
                   <CardTitle className="text-base md:text-lg font-black uppercase text-foreground italic tracking-tight">
-                    Análise POCK-IA
+                    Raio-X da Partida
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6 space-y-5">
                   {model ? (
                     <>
                       {[
-                        { label: 'Probabilidade de Gol', value: model.goal_prob, color: 'from-red-700 to-red-500' },
-                        { label: 'Probabilidade de Escanteio', value: model.corner_prob, color: 'from-orange-700 to-orange-500' },
-                        { label: 'Índice de Pressão', value: model.pressure_index, color: 'from-emerald-700 to-primary' },
+                        { label: 'Chance de Gol', value: model.goal_prob, color: 'from-red-700 to-red-500' },
+                        { label: 'Chance de Escanteio', value: model.corner_prob, color: 'from-orange-700 to-orange-500' },
+                        { label: 'Nível de Pressão', value: model.pressure_index, color: 'from-emerald-700 to-primary' },
                       ].map(({ label, value, color }) => (
                         <div key={label} className="space-y-1">
                           <div className="flex items-center justify-between text-[10px] font-black uppercase">
@@ -340,7 +360,7 @@ export default function MatchPage({ params }: PageProps) {
 
                       {engine?.qte_events && engine.qte_events.length > 0 && (
                         <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
-                          <h4 className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Eventos Táticos Detectados</h4>
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Alertas detectados pela IA</h4>
                           {engine.qte_events.map((qte, i) => {
                             const colorMap = {
                               GOAL_IMMINENT: 'border-red-700/40 bg-red-900/10 text-red-400',
@@ -352,10 +372,10 @@ export default function MatchPage({ params }: PageProps) {
                               <div key={i} className={cn('rounded-xl border p-3 space-y-2', c)}>
                                 <div className="flex items-center justify-between">
                                   <span className="text-[10px] font-black uppercase tracking-widest">
-                                    {qte.type === 'GOAL_IMMINENT' ? '🔴 Gol Iminente' : qte.type === 'OFFENSIVE_SURGE' ? '🟠 Surge Ofensivo' : '🟡 Caos Final'}
+                                    {qte.type === 'GOAL_IMMINENT' ? '🔴 Gol a caminho' : qte.type === 'OFFENSIVE_SURGE' ? '🟠 Time pressionando forte' : '🟡 Jogo imprevisível no final'}
                                     {qte.team_name ? ` — ${qte.team_name}` : ''}
                                   </span>
-                                  <span className="text-[10px] font-black">{Math.round(qte.confidence * 100)}%</span>
+                                  <span className="text-[10px] font-black">Certeza: {Math.round(qte.confidence * 100)}%</span>
                                 </div>
                                 <div className="space-y-1">
                                   {qte.reasons.map((r, ri) => (
@@ -372,7 +392,7 @@ export default function MatchPage({ params }: PageProps) {
                     </>
                   ) : (
                     <p className="text-xs font-black uppercase tracking-widest text-muted-foreground text-center py-8 animate-pulse">
-                      Aguardando snapshot da partida...
+                      Coletando dados da partida...
                     </p>
                   )}
                 </CardContent>
@@ -383,16 +403,16 @@ export default function MatchPage({ params }: PageProps) {
               <Card className="border-border bg-card rounded-2xl overflow-hidden shadow-lg shadow-black/20">
                 <CardHeader className="border-b border-white/5 pb-4">
                   <CardTitle className="text-base md:text-lg font-black uppercase text-foreground italic tracking-tight">
-                    Explicabilidade SHAP
+                    Por que a IA tomou essa decisão?
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="pt-6">
-                  {shap?.available && shap.reasons.length > 0 ? (
+                  {shapAvailable ? (
                     <div className="space-y-4">
                       <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
-                        Top fatores que influenciam a decisão do modelo
+                        Principais motivos que levaram a IA a emitir esse alerta
                       </p>
-                      {shap.reasons.map((r, i) => {
+                      {shapReasons.map((r, i) => {
                         const positive = r.direction.toLowerCase().includes('aumenta')
                         return (
                           <div key={i} className="flex items-center gap-3 rounded-xl bg-secondary/30 p-3 border border-white/5">
@@ -413,13 +433,26 @@ export default function MatchPage({ params }: PageProps) {
                       })}
                     </div>
                   ) : (
-                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground text-center py-8 animate-pulse">
-                      {inference ? 'SHAP não disponível para este jogo' : 'Aguardando snapshot...'}
-                    </p>
+                    <div className="flex flex-col items-center justify-center py-10 gap-4 text-center">
+                      <div className="rounded-full border border-primary/20 bg-primary/5 p-4">
+                        <ChartBarIcon className="h-8 w-8 text-primary/40" />
+                      </div>
+                      <div className="space-y-1.5">
+                        <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                          {!inference ? 'Carregando análise...' : 'A IA ainda está analisando'}
+                        </p>
+                        <p className="text-[10px] font-bold text-neutral-600 max-w-[260px] leading-relaxed">
+                          {inference
+                            ? 'A IA precisa de alguns minutos acompanhando o jogo antes de explicar os motivos das suas decisões. Continue monitorando e as razões aparecerão em breve.'
+                            : 'A IA está coletando informações sobre essa partida pela primeira vez.'}
+                        </p>
+                      </div>
+                    </div>
                   )}
                 </CardContent>
               </Card>
             </TabsContent>
+
           </div>
 
           {/* Sidebar */}
@@ -429,17 +462,17 @@ export default function MatchPage({ params }: PageProps) {
               <Card className="border-border bg-card rounded-2xl shadow-lg overflow-hidden">
                 <CardHeader className="border-b border-white/5 pb-3">
                   <CardTitle className="text-[10px] md:text-xs font-black uppercase text-muted-foreground tracking-widest">
-                    Score do Modelo
+                    Nível de Alerta da IA
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 pt-4">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Score</span>
-                    <span className="font-mono text-sm font-bold text-foreground">{decision.score.toFixed(3)}</span>
+                    <span className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Intensidade</span>
+                    <span className="font-mono text-sm font-bold text-foreground">{Math.round(decision.score * 100)}%</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Threshold</span>
-                    <span className="font-mono text-sm font-bold text-foreground">{decision.threshold.toFixed(2)}</span>
+                    <span className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Mínimo para alertar</span>
+                    <span className="font-mono text-sm font-bold text-foreground">{Math.round(decision.threshold * 100)}%</span>
                   </div>
                   <div className="h-2.5 rounded-full bg-neutral-800 overflow-hidden">
                     <div
@@ -448,7 +481,7 @@ export default function MatchPage({ params }: PageProps) {
                     />
                   </div>
                   <Badge className={cn('w-full justify-center font-black uppercase italic tracking-widest text-[10px]', decision.trigger ? 'bg-primary/20 text-primary border-primary/30' : 'bg-neutral-800 text-neutral-400 border-white/5')}>
-                    {decision.trigger ? '⚡ ALERTA ATIVO' : 'Monitorando...'}
+                    {decision.trigger ? '⚡ MOMENTO QUENTE' : 'Monitorando...'}
                   </Badge>
                 </CardContent>
               </Card>
@@ -459,14 +492,14 @@ export default function MatchPage({ params }: PageProps) {
               <Card className="border-border bg-card rounded-2xl shadow-lg">
                 <CardHeader className="border-b border-white/5 pb-3">
                   <CardTitle className="text-[10px] md:text-xs font-black uppercase text-muted-foreground tracking-widest">
-                    Previsões do Modelo
+                    Previsões da IA
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 pt-4">
                   {[
-                    { label: 'Prob. Gol', val: model.goal_prob },
-                    { label: 'Prob. Escanteio', val: model.corner_prob },
-                    { label: 'Pressão', val: model.pressure_index },
+                    { label: '⚽ Chance de Gol', val: model.goal_prob },
+                    { label: '🚩 Chance de Escanteio', val: model.corner_prob },
+                    { label: '🔥 Pressão no Jogo', val: model.pressure_index },
                   ].map(({ label, val }) => (
                     <div key={label} className="flex items-center justify-between rounded-xl bg-secondary/40 p-3 border border-white/5">
                       <span className="text-[10px] font-black uppercase text-neutral-500 tracking-tighter">{label}</span>

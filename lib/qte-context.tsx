@@ -34,15 +34,15 @@ function buildLiveQteEvent(
   const teamLabel = qte.team_name ?? ''
 
   const titles: Record<ApiQteType, string> = {
-    GOAL_IMMINENT: teamLabel ? `${teamLabel} — Chance de Gol Iminente` : 'Chance de Gol Iminente',
-    OFFENSIVE_SURGE: teamLabel ? `Surge Ofensivo de ${teamLabel}` : 'Surge Ofensivo',
-    LATE_GAME_CHAOS: 'Caos no Fim — Jogo Aberto',
+    GOAL_IMMINENT: teamLabel ? `${teamLabel} — Chance de Gol!` : 'Chance de Gol!',
+    OFFENSIVE_SURGE: teamLabel ? `${teamLabel} no Ataque!` : 'Ataque Perigoso!',
+    LATE_GAME_CHAOS: 'Final Alucinante — Jogo Aberto',
   }
 
   const messages: Record<ApiQteType, string> = {
-    GOAL_IMMINENT: `IA detectou pressão intensa. ${Math.round(qte.confidence * 100)}% de confiança em gol iminente.`,
-    OFFENSIVE_SURGE: `Surge ofensivo detectado pelo motor de decisão. Confiança: ${Math.round(qte.confidence * 100)}%.`,
-    LATE_GAME_CHAOS: `Jogo aberto e instável no fim. Alta voltabilidade — ${Math.round(qte.confidence * 100)}% de confiança.`,
+    GOAL_IMMINENT: `BOA CHANCE DE GOL! A IA detectou as linhas muito altas e a defesa sob pressão. Há uma boa probabilidade de gol nos próximos lances.`,
+    OFFENSIVE_SURGE: `TIME NO ATAQUE! O volume ofensivo subiu e o time está finalizando com perigo. É um ótimo momento para acompanhar este lance.`,
+    LATE_GAME_CHAOS: `JOGO ABERTO! As defesas estão cansadas e o jogo ficou lá e cá. Existe uma boa chance de gols rápidos nesse final de partida.`,
   }
 
   const colors: Record<ApiQteType, LiveQteEvent['color']> = {
@@ -184,7 +184,7 @@ export function QteProvider({ children }: { children: ReactNode }) {
                 team_side: null,
                 confidence: decision.score,
                 valid_for_seconds: 60,
-                reasons: ['Modelo ML detectou momento relevante', `Score: ${decision.score.toFixed(2)}`],
+                reasons: ['Nossa IA detectou um momento importante no jogo', `Força do lance: ${Math.round(decision.score * 100)}%`],
               }
 
               const event = buildLiveQteEvent(matchId, syntheticQte, {
@@ -200,7 +200,7 @@ export function QteProvider({ children }: { children: ReactNode }) {
                 triggeredByQte: false,
               })
 
-              const greenEvent: LiveQteEvent = { ...event, color: 'green', title: 'Momento Relevante Detectado' }
+              const greenEvent: LiveQteEvent = { ...event, color: 'green', title: 'Lance Importante Detectado' }
               setActiveLiveQte(greenEvent)
               activeRef.current = greenEvent
             }
