@@ -21,8 +21,13 @@ export function QteProvider({ children }: { children: ReactNode }) {
     setActiveQte(null)
   }, [])
 
-    const triggerQte = useCallback((type: 'goal' | 'card' | 'corner' | 'foul') => {
-    const profile = user.bettingProfile
+  const triggerQte = useCallback((type: 'goal' | 'card' | 'corner' | 'foul') => {
+    setActiveQte((currentQte) => {
+      if (currentQte) {
+        return currentQte
+      }
+
+      const profile = user.bettingProfile
     
     // Config based on profile
     const config = ({
@@ -59,62 +64,63 @@ export function QteProvider({ children }: { children: ReactNode }) {
       foulLabel: 'Próxima falta será casa',
     })
 
-    const confidence = Math.floor(Math.random() * (100 - config.minConfidence + 1)) + config.minConfidence
-    
-    const randomMatch = mockMatches[Math.floor(Math.random() * mockMatches.length)]
-    const matchId = randomMatch.id
-    
-    const id = `qte-${Date.now()}`
-    const event: QteEvent = {
-      id,
-      matchId,
-      type,
-      title: {
-        goal: 'Quick Bet: GOAL',
-        card: 'Quick Bet: CARD',
-        corner: 'Quick Bet: CORNER',
-        foul: 'Quick Bet: FOUL'
-      }[type],
-      message: {
-        goal: `Pressão total no ataque! ${confidence}% de chance de gol nos próximos 3 minutos.`,
-        card: `Clima quente em campo! ${confidence}% de chance de cartão nos próximos 5 minutos.`,
-        corner: `Muitos cruzamentos na área! ${confidence}% de chance de escanteio agora.`,
-        foul: `Jogo truncado no meio-campo! ${confidence}% de chance de falta em breve.`
-      }[type],
-      duration: config.duration,
-      confidence,
-      actions: {
-        goal: [{ label: config.goalLabel, action: 'bet_goal', odds: profile === 'agressivo' ? 3.5 : 1.8 }],
-        card: [{ label: config.cardLabel, action: 'bet_card', odds: profile === 'agressivo' ? 4.2 : 2.1 }],
-        corner: [{ label: config.cornerLabel, action: 'bet_corner', odds: profile === 'agressivo' ? 2.5 : 1.4 }],
-        foul: [{ label: config.foulLabel, action: 'bet_foul', odds: profile === 'agressivo' ? 5.8 : 2.8 }]
-      }[type],
-      timestamp: new Date(),
-      reasons: {
-        goal: [
-          'Alto número de ataques perigosos do time da casa',
-          'Múltiplas finalizações no gol nos últimos minutos',
-          'Pressão ofensiva intensa detectada pela IA'
-        ],
-        card: [
-          'Aumento na frequência de faltas táticas',
-          'Clima de tensão entre jogadores detectado',
-          'Árbitro com média alta de cartões por partida'
-        ],
-        corner: [
-          'Time explora as laterais com frequência',
-          'Volume alto de cruzamentos na área',
-          'Defesa adversária priorizando corte pra linha de fundo'
-        ],
-        foul: [
-          'Disputas físicas intensas no meio-campo',
-          'Histórico de rivalidade entre as equipes',
-          'Estilo de jogo agressivo de ambos os times'
-        ]
-      }[type]
-    }
+      const confidence = Math.floor(Math.random() * (100 - config.minConfidence + 1)) + config.minConfidence
 
-    setActiveQte(event)
+      const randomMatch = mockMatches[Math.floor(Math.random() * mockMatches.length)]
+      const matchId = randomMatch.id
+
+      const id = `qte-${Date.now()}`
+      const event: QteEvent = {
+        id,
+        matchId,
+        type,
+        title: {
+          goal: 'Quick Bet: GOAL',
+          card: 'Quick Bet: CARD',
+          corner: 'Quick Bet: CORNER',
+          foul: 'Quick Bet: FOUL'
+        }[type],
+        message: {
+          goal: `Pressao total no ataque! ${confidence}% de chance de gol nos proximos 3 minutos.`,
+          card: `Clima quente em campo! ${confidence}% de chance de cartao nos proximos 5 minutos.`,
+          corner: `Muitos cruzamentos na area! ${confidence}% de chance de escanteio agora.`,
+          foul: `Jogo truncado no meio-campo! ${confidence}% de chance de falta em breve.`
+        }[type],
+        duration: config.duration,
+        confidence,
+        actions: {
+          goal: [{ label: config.goalLabel, action: 'bet_goal', odds: profile === 'agressivo' ? 3.5 : 1.8 }],
+          card: [{ label: config.cardLabel, action: 'bet_card', odds: profile === 'agressivo' ? 4.2 : 2.1 }],
+          corner: [{ label: config.cornerLabel, action: 'bet_corner', odds: profile === 'agressivo' ? 2.5 : 1.4 }],
+          foul: [{ label: config.foulLabel, action: 'bet_foul', odds: profile === 'agressivo' ? 5.8 : 2.8 }]
+        }[type],
+        timestamp: new Date(),
+        reasons: {
+          goal: [
+            'Alto numero de ataques perigosos do time da casa',
+            'Multiplas finalizacoes no gol nos ultimos minutos',
+            'Pressao ofensiva intensa detectada pela IA'
+          ],
+          card: [
+            'Aumento na frequencia de faltas taticas',
+            'Clima de tensao entre jogadores detectado',
+            'Arbitro com media alta de cartoes por partida'
+          ],
+          corner: [
+            'Time explora as laterais com frequencia',
+            'Volume alto de cruzamentos na area',
+            'Defesa adversaria priorizando corte pra linha de fundo'
+          ],
+          foul: [
+            'Disputas fisicas intensas no meio-campo',
+            'Historico de rivalidade entre as equipes',
+            'Estilo de jogo agressivo de ambos os times'
+          ]
+        }[type]
+      }
+
+      return event
+    })
   }, [user.bettingProfile])
 
   // Simulation

@@ -1,10 +1,12 @@
 'use client'
 
+import { useEffect } from 'react'
 import { 
   XMarkIcon
 } from '@heroicons/react/24/solid'
 import { Button } from '@/components/ui/button'
 import { useNotifications } from '@/lib/notification-context'
+import { useQte } from '@/lib/qte-context'
 import { cn } from '@/lib/utils'
 import type { InsightType } from '@/lib/types'
 import { mockMatches } from '@/lib/mock-data'
@@ -24,13 +26,20 @@ function getNotificationBorder(type: InsightType) {
 
 export function NotificationToast() {
   const { latestNotification, dismissLatest, markAsRead } = useNotifications()
+  const { activeQte } = useQte()
 
-  if (!latestNotification) return null
+  useEffect(() => {
+    // Do not let notifications compete with the quick bet flow on screen.
+    if (activeQte) {
+      dismissLatest()
+    }
+  }, [activeQte, dismissLatest])
+
+  if (!latestNotification || activeQte) return null
 
   const borderColor = getNotificationBorder(latestNotification.type)
   
   const match = mockMatches.find(m => m.id === latestNotification.matchId)
-  const matchName = match ? `${match.homeTeam.name} vs ${match.awayTeam.name}` : 'Bundesliga'
 
   const handleDismiss = () => {
     markAsRead(latestNotification.id)
