@@ -47,12 +47,8 @@ export function LiveMatchCard({ match }: LiveMatchCardProps) {
           <div className="flex items-center justify-between p-4 md:p-6 gap-2">
             {/* Home Team */}
             <div className="flex flex-1 flex-col items-center gap-2">
-              <div className="flex h-12 w-12 md:h-16 md:w-16 items-center justify-center rounded-full bg-secondary/40 border border-white/5 overflow-hidden">
-                {match.homeLogo ? (
-                  <img src={match.homeLogo} alt={match.home} className="h-full w-full object-contain p-2" />
-                ) : (
-                  <span className="text-xs font-black text-foreground">{getInitials(match.home)}</span>
-                )}
+              <div className="flex h-12 w-12 md:h-16 md:w-16 items-center justify-center rounded-full bg-secondary/40 border border-white/5 text-xs font-black text-foreground">
+                {getInitials(match.home)}
               </div>
               <span className="text-center text-[10px] md:text-xs font-black text-foreground uppercase italic tracking-tighter">
                 {match.homeShort}
@@ -86,12 +82,8 @@ export function LiveMatchCard({ match }: LiveMatchCardProps) {
 
             {/* Away Team */}
             <div className="flex flex-1 flex-col items-center gap-2">
-              <div className="flex h-12 w-12 md:h-16 md:w-16 items-center justify-center rounded-full bg-secondary/40 border border-white/5 overflow-hidden">
-                {match.awayLogo ? (
-                  <img src={match.awayLogo} alt={match.away} className="h-full w-full object-contain p-2" />
-                ) : (
-                  <span className="text-xs font-black text-foreground">{getInitials(match.away)}</span>
-                )}
+              <div className="flex h-12 w-12 md:h-16 md:w-16 items-center justify-center rounded-full bg-secondary/40 border border-white/5 text-xs font-black text-foreground">
+                {getInitials(match.away)}
               </div>
               <span className="text-center text-[10px] md:text-xs font-black text-foreground uppercase italic tracking-tighter">
                 {match.awayShort}

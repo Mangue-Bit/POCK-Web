@@ -40,9 +40,9 @@ function buildLiveQteEvent(
   }
 
   const messages: Record<ApiQteType, string> = {
-    GOAL_IMMINENT: `BOA CHANCE DE GOL! A IA detectou as linhas muito altas e a defesa sob pressão. Há uma boa probabilidade de gol nos próximos lances.`,
-    OFFENSIVE_SURGE: `TIME NO ATAQUE! O volume ofensivo subiu e o time está finalizando com perigo. É um ótimo momento para acompanhar este lance.`,
-    LATE_GAME_CHAOS: `JOGO ABERTO! As defesas estão cansadas e o jogo ficou lá e cá. Existe uma boa chance de gols rápidos nesse final de partida.`,
+    GOAL_IMMINENT: `Nossa IA detectou pressão total. ${Math.round(qte.confidence * 100)}% de chance de sair um gol agora.`,
+    OFFENSIVE_SURGE: `O time está partindo para cima. IA calculou ${Math.round(qte.confidence * 100)}% de chance de lance perigoso.`,
+    LATE_GAME_CHAOS: `O jogo ficou totalmente aberto e imprevisível. Chance de ${Math.round(qte.confidence * 100)}% para lances rápidos.`,
   }
 
   const colors: Record<ApiQteType, LiveQteEvent['color']> = {

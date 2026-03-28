@@ -17,8 +17,6 @@ export interface LiveMatch {
   league: string
   status: 'live'
   stats: ApiMatch['stats']
-  homeLogo?: string
-  awayLogo?: string
 }
 
 function toShort(name: string): string {
@@ -45,8 +43,6 @@ function toUi(m: ApiMatch): LiveMatch {
     league: m.league,
     status: 'live',
     stats: m.stats,
-    homeLogo: m.homeLogo,
-    awayLogo: m.awayLogo,
   }
 }
 

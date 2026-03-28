@@ -197,12 +197,8 @@ export default function MatchPage({ params }: PageProps) {
           <div className="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-8 md:py-10 gap-8 md:gap-4">
             {/* Home Team */}
             <div className="flex flex-row md:flex-col items-center gap-4 flex-1 w-full md:w-auto justify-center md:justify-start">
-              <div className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-secondary/40 border-2 border-white/5 flex items-center justify-center overflow-hidden">
-                {liveMatch?.homeLogo ? (
-                  <img src={liveMatch.homeLogo} alt={home} className="h-full w-full object-contain p-4" />
-                ) : (
-                  <span className="text-xl font-black text-foreground">{getInitials(home)}</span>
-                )}
+              <div className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-secondary/40 border-2 border-white/5 flex items-center justify-center text-xl font-black text-foreground">
+                {getInitials(home)}
               </div>
               <div className="text-left md:text-center w-full md:w-auto">
                 <h2 className="text-lg md:text-2xl font-black text-foreground uppercase italic tracking-tighter line-clamp-1">{home}</h2>
@@ -228,12 +224,8 @@ export default function MatchPage({ params }: PageProps) {
 
             {/* Away Team */}
             <div className="flex flex-row-reverse md:flex-col items-center gap-4 flex-1 w-full md:w-auto justify-center md:justify-start">
-              <div className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-secondary/40 border-2 border-white/5 flex items-center justify-center overflow-hidden">
-                {liveMatch?.awayLogo ? (
-                  <img src={liveMatch.awayLogo} alt={away} className="h-full w-full object-contain p-4" />
-                ) : (
-                  <span className="text-xl font-black text-foreground">{getInitials(away)}</span>
-                )}
+              <div className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-secondary/40 border-2 border-white/5 flex items-center justify-center text-xl font-black text-foreground">
+                {getInitials(away)}
               </div>
               <div className="text-right md:text-center w-full md:w-auto">
                 <h2 className="text-lg md:text-2xl font-black text-foreground uppercase italic tracking-tighter line-clamp-1">{away}</h2>
