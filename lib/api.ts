@@ -89,6 +89,14 @@ export interface ApiInference {
       }>
     }
   }
+  normalized_event: {
+    stats: {
+      attacks: [number, number]
+      dangerous_attacks: [number, number]
+      possession: [number, number]
+      shots_on_target: [number, number]
+    }
+  }
   drift: {
     has_previous: boolean
     l1_sum_abs_delta: number

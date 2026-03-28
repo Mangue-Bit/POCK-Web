@@ -131,7 +131,7 @@ export default function MatchPage({ params }: PageProps) {
       : []
   const shapAvailable = shapReasons.length > 0
 
-  const stats = liveMatch?.stats
+  const stats = inference?.normalized_event?.stats ?? liveMatch?.stats
 
   function getInitials(name: string) {
     return name.split(' ').map(w => w[0]).join('').substring(0, 3).toUpperCase()
