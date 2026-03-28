@@ -1,15 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
-import { 
-  XMarkIcon
-} from '@heroicons/react/24/solid'
+import { XMarkIcon } from '@heroicons/react/24/solid'
 import { Button } from '@/components/ui/button'
 import { useNotifications } from '@/lib/notification-context'
-import { useQte } from '@/lib/qte-context'
 import { cn } from '@/lib/utils'
 import type { InsightType } from '@/lib/types'
-import { mockMatches } from '@/lib/mock-data'
 
 function getNotificationBorder(type: InsightType) {
   switch (type) {
@@ -26,20 +21,10 @@ function getNotificationBorder(type: InsightType) {
 
 export function NotificationToast() {
   const { latestNotification, dismissLatest, markAsRead } = useNotifications()
-  const { activeQte } = useQte()
 
-  useEffect(() => {
-    // Do not let notifications compete with the quick bet flow on screen.
-    if (activeQte) {
-      dismissLatest()
-    }
-  }, [activeQte, dismissLatest])
-
-  if (!latestNotification || activeQte) return null
+  if (!latestNotification) return null
 
   const borderColor = getNotificationBorder(latestNotification.type)
-  
-  const match = mockMatches.find(m => m.id === latestNotification.matchId)
 
   const handleDismiss = () => {
     markAsRead(latestNotification.id)
@@ -50,22 +35,20 @@ export function NotificationToast() {
     <div className="fixed bottom-4 right-4 z-50 notification-enter">
       <div
         className={cn(
-          'w-96 rounded-xl border border-border bg-card shadow-2xl transition-all duration-300',
+          'w-80 md:w-96 rounded-xl border border-border bg-card shadow-2xl transition-all duration-300',
           'border-l-4',
-          borderColor
+          borderColor,
         )}
       >
         <div className="p-4">
           <div className="flex items-start gap-3">
             <div className="flex-1 space-y-1">
               <div className="flex items-start justify-between">
-                <div className="flex flex-col gap-2">
-                  {match && (
-                    <div className="flex items-center gap-1.5 pt-0.5">
-                      <img src={match.homeTeam.logo} alt="" className="h-7 w-7 object-contain" />
-                      <span className="text-[10px] font-black text-primary/40 italic">VS</span>
-                      <img src={match.awayTeam.logo} alt="" className="h-7 w-7 object-contain" />
-                    </div>
+                <div className="flex flex-col gap-1">
+                  {latestNotification.matchId && (
+                    <span className="text-[9px] font-black uppercase tracking-widest text-primary/50 italic">
+                      Partida #{latestNotification.matchId}
+                    </span>
                   )}
                   <p className="text-base font-bold text-foreground tracking-tight">
                     {latestNotification.title}

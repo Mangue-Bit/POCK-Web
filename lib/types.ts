@@ -99,6 +99,7 @@ export interface QteAction {
   odds?: number
 }
 
+/** Legacy internal QTE type (kept for compatibility) */
 export interface QteEvent {
   id: string
   matchId: string
@@ -111,3 +112,35 @@ export interface QteEvent {
   timestamp: Date
   reasons?: string[]
 }
+
+/** QTE type produced by the real EDScript decision engine */
+export type ApiQteType = 'GOAL_IMMINENT' | 'OFFENSIVE_SURGE' | 'LATE_GAME_CHAOS'
+
+/** Enriched QTE event built from a real /inference response */
+export interface LiveQteEvent {
+  id: string
+  matchId: string
+  apiType: ApiQteType
+  teamName: string | null
+  teamSide: 'home' | 'away' | null
+  confidence: number            // 0–1
+  validForSeconds: number
+  reasons: string[]
+  /** Derived display fields */
+  title: string
+  message: string
+  color: 'red' | 'orange' | 'yellow' | 'green'
+  duration: number              // same as validForSeconds, capped for UI
+  /** Full inference snapshot (for match display) */
+  home: string
+  away: string
+  score: string
+  minute: number
+  league: string
+  goalProb: number
+  pressureIndex: number
+  decisionScore: number
+  triggeredByScore: boolean
+  triggeredByQte: boolean
+}
+

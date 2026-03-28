@@ -2,50 +2,93 @@
 
 import { use } from 'react'
 import Link from 'next/link'
-import { ArrowLeftIcon, SignalIcon, ClockIcon, StarIcon } from '@heroicons/react/24/outline'
+import {
+  ArrowLeftIcon,
+  SignalIcon,
+  StarIcon,
+  BoltIcon,
+  FireIcon,
+  ArrowTrendingUpIcon,
+  ChartBarIcon,
+} from '@heroicons/react/24/outline'
 import { StarIcon as StarIconSolid } from '@heroicons/react/24/solid'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { TeamBadge } from '@/components/team-badge'
-import { MatchStats } from '@/components/match-stats'
-import { MatchTimeline } from '@/components/match-timeline'
-import { OddsPanel } from '@/components/odds-panel'
-import { MatchInsights } from '@/components/match-insights'
 import { useUser } from '@/lib/user-context'
-import { mockMatches, mockInsights } from '@/lib/mock-data'
+import { useInference } from '@/hooks/use-inference'
+import { useLiveMatches } from '@/hooks/use-live-matches'
 import { cn } from '@/lib/utils'
 
 interface PageProps {
   params: Promise<{ id: string }>
 }
 
-function getStatusLabel(status: string, minute?: number) {
-  switch (status) {
-    case 'live':
-      return `${minute}'`
-    case 'halftime':
-      return 'Intervalo'
-    case 'finished':
-      return 'Encerrado'
-    default:
-      return 'Agendado'
-  }
+function StatBar({ label, home, away }: { label: string; home: number; away: number }) {
+  const total = home + away || 1
+  const homePct = Math.round((home / total) * 100)
+  const awayPct = 100 - homePct
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center justify-between text-[10px] font-black uppercase text-neutral-500 tracking-widest">
+        <span>{home}</span>
+        <span>{label}</span>
+        <span>{away}</span>
+      </div>
+      <div className="flex h-2 overflow-hidden rounded-full bg-neutral-800">
+        <div className="bg-primary transition-all duration-500" style={{ width: `${homePct}%` }} />
+        <div className="bg-neutral-600 transition-all duration-500" style={{ width: `${awayPct}%` }} />
+      </div>
+    </div>
+  )
+}
+
+function PressureBar({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="space-y-1">
+      <div className="flex items-center justify-between text-[10px] font-black uppercase">
+        <span className="text-neutral-500 tracking-widest">{label}</span>
+        <span className="text-primary">{Math.round(value * 100)}%</span>
+      </div>
+      <div className="h-2 rounded-full bg-neutral-800 overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-emerald-600 to-primary rounded-full transition-all duration-700"
+          style={{ width: `${value * 100}%` }}
+        />
+      </div>
+    </div>
+  )
 }
 
 export default function MatchPage({ params }: PageProps) {
   const { id } = use(params)
   const { isFollowingMatch, followMatch, unfollowMatch } = useUser()
+  const { matches } = useLiveMatches()
+  const { data: inference, loading } = useInference(id)
 
-  const match = mockMatches.find(m => m.id === id)
-  const insight = mockInsights.find(i => i.matchId === id)
   const isFollowing = isFollowingMatch(id)
 
-  if (!match) {
+  // Try to get basic match info from live matches list
+  const liveMatch = matches.find(m => m.match_id === id)
+
+  // If no inference available yet
+  if (loading && !liveMatch) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4">
+        <div className="h-12 w-12 rounded-full border-2 border-primary border-t-transparent animate-spin" />
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground animate-pulse">
+          Carregando análise IA...
+        </p>
+      </div>
+    )
+  }
+
+  if (!inference && !liveMatch) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center">
         <h1 className="text-2xl font-bold text-foreground">Jogo não encontrado</h1>
+        <p className="mt-2 text-sm text-muted-foreground">Aguarde o próximo ciclo do radar ou verifique se o jogo ainda está ao vivo.</p>
         <Link href="/">
           <Button variant="outline" className="mt-4 gap-2">
             <ArrowLeftIcon className="h-4 w-4" />
@@ -56,7 +99,31 @@ export default function MatchPage({ params }: PageProps) {
     )
   }
 
-  const isLive = match.status === 'live' || match.status === 'halftime'
+  // Use inference context if available, else fall back to liveMatch
+  const home = inference?.snapshot_context.home ?? liveMatch?.home ?? '—'
+  const away = inference?.snapshot_context.away ?? liveMatch?.away ?? '—'
+  const score = inference?.snapshot_context.score ?? liveMatch?.score ?? '0:0'
+  const minute = inference?.snapshot_context.minute ?? liveMatch?.minute ?? 0
+  const league = inference?.snapshot_context.league ?? liveMatch?.league ?? ''
+
+  const scoreParts = score ? score.split(':') : ['0', '0']
+  const homeScore = parseInt(scoreParts[0] ?? '0', 10) || 0
+  const awayScore = parseInt(scoreParts[1] ?? '0', 10) || 0
+  const homeWinning = homeScore > awayScore
+  const awayWinning = awayScore > homeScore
+
+
+  const decision = inference?.decision
+  const engine = inference?.decision_engine
+  const model = inference?.model_outputs?.model_predict
+  const shap = inference?.shap?.expanded
+  const drift = inference?.drift
+
+  const stats = liveMatch?.stats
+
+  function getInitials(name: string) {
+    return name.split(' ').map(w => w[0]).join('').substring(0, 3).toUpperCase()
+  }
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-4 md:py-8 transition-all">
@@ -74,44 +141,30 @@ export default function MatchPage({ params }: PageProps) {
           {/* Status Bar */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-border bg-secondary/30 px-4 md:px-6 py-3 gap-3">
             <div className="flex items-center gap-3">
-              {isLive && (
-                <span className="relative flex h-3 w-3">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                  <span className="relative inline-flex h-3 w-3 rounded-full bg-primary" />
-                </span>
-              )}
-              <Badge
-                className={cn(
-                  'text-[10px] md:text-sm font-black italic uppercase tracking-widest',
-                  isLive
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-secondary text-secondary-foreground'
-                )}
-              >
-                {getStatusLabel(match.status, match.minute)}
+              <span className="relative flex h-3 w-3">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex h-3 w-3 rounded-full bg-primary" />
+              </span>
+              <Badge className="text-[10px] md:text-sm font-black italic uppercase tracking-widest bg-primary text-primary-foreground">
+                {minute}&apos;
               </Badge>
-              {isLive && (
-                <div className="flex items-center gap-1 text-[10px] md:text-sm font-black text-primary uppercase italic">
-                  <SignalIcon className="h-4 w-4 animate-pulse" />
-                  <span>Ao Vivo</span>
-                </div>
-              )}
+              <div className="flex items-center gap-1 text-[10px] md:text-sm font-black text-primary uppercase italic">
+                <SignalIcon className="h-4 w-4 animate-pulse" />
+                <span>Ao Vivo</span>
+              </div>
             </div>
             <div className="flex items-center justify-between sm:justify-end gap-3 w-full sm:w-auto">
               <div className="flex items-center gap-1.5 text-[10px] md:text-sm font-bold text-muted-foreground uppercase tracking-tight">
-                <ClockIcon className="h-4 w-4 shrink-0" />
-                <span>Bundesliga · Rodada {match.round}</span>
+                <span>{league}</span>
               </div>
               <Button
                 variant="outline"
                 size="sm"
                 className={cn(
                   'gap-2 h-9 md:h-10 font-bold text-xs uppercase tracking-widest transition-all active:scale-95',
-                  isFollowing && 'border-primary text-primary bg-primary/5 shadow-[0_0_10px_rgba(var(--primary),0.1)]'
+                  isFollowing && 'border-primary text-primary bg-primary/5 shadow-[0_0_10px_rgba(var(--primary),0.1)]',
                 )}
-                onClick={() =>
-                  isFollowing ? unfollowMatch(id) : followMatch(id)
-                }
+                onClick={() => isFollowing ? unfollowMatch(id) : followMatch(id)}
               >
                 {isFollowing ? (
                   <>
@@ -132,11 +185,11 @@ export default function MatchPage({ params }: PageProps) {
           <div className="flex flex-col md:flex-row items-center justify-between px-4 md:px-8 py-8 md:py-10 gap-8 md:gap-4">
             {/* Home Team */}
             <div className="flex flex-row md:flex-col items-center gap-4 flex-1 w-full md:w-auto justify-center md:justify-start">
-              <TeamBadge team={match.homeTeam} size="lg" className="md:w-24 md:h-24" />
+              <div className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-secondary/40 border-2 border-white/5 flex items-center justify-center text-xl font-black text-foreground">
+                {getInitials(home)}
+              </div>
               <div className="text-left md:text-center w-full md:w-auto">
-                <h2 className="text-lg md:text-2xl font-black text-foreground uppercase italic tracking-tighter line-clamp-1">
-                  {match.homeTeam.name}
-                </h2>
+                <h2 className="text-lg md:text-2xl font-black text-foreground uppercase italic tracking-tighter line-clamp-1">{home}</h2>
                 <p className="text-[10px] md:text-xs font-black text-muted-foreground uppercase tracking-widest">Mandante</p>
               </div>
             </div>
@@ -144,46 +197,56 @@ export default function MatchPage({ params }: PageProps) {
             {/* Score */}
             <div className="flex flex-col items-center gap-2 md:gap-4 px-4 md:px-12 order-first md:order-none w-full md:w-auto">
               <div className="flex items-center gap-4 md:gap-8 bg-neutral-900/50 md:bg-transparent px-8 py-4 md:p-0 rounded-2xl border border-white/5 md:border-none shadow-inner md:shadow-none">
-                <span
-                  className={cn(
-                    'text-5xl md:text-7xl font-black tabular-nums italic tracking-tighter leading-none',
-                    match.homeScore > match.awayScore
-                      ? 'text-primary drop-shadow-[0_0_15px_rgba(var(--primary),0.3)]'
-                      : 'text-foreground'
-                  )}
-                >
-                  {match.homeScore}
+                <span className={cn('text-5xl md:text-7xl font-black tabular-nums italic tracking-tighter leading-none', homeWinning ? 'text-primary drop-shadow-[0_0_15px_rgba(var(--primary),0.3)]' : 'text-foreground')}>
+                  {homeScore}
                 </span>
                 <span className="text-2xl md:text-4xl font-light text-muted-foreground opacity-30 italic">/</span>
-                <span
-                  className={cn(
-                    'text-5xl md:text-7xl font-black tabular-nums italic tracking-tighter leading-none',
-                    match.awayScore > match.homeScore
-                      ? 'text-primary drop-shadow-[0_0_15px_rgba(var(--primary),0.3)]'
-                      : 'text-foreground'
-                  )}
-                >
-                  {match.awayScore}
+                <span className={cn('text-5xl md:text-7xl font-black tabular-nums italic tracking-tighter leading-none', awayWinning ? 'text-primary drop-shadow-[0_0_15px_rgba(var(--primary),0.3)]' : 'text-foreground')}>
+                  {awayScore}
                 </span>
               </div>
-              {isLive && (
-                <div className="rounded-full bg-primary/10 px-4 py-1.5 text-[10px] md:text-xs font-black text-primary uppercase italic tracking-widest border border-primary/20 animate-pulse">
-                  {match.minute}&apos; MINUTO
-                </div>
-              )}
+              <div className="rounded-full bg-primary/10 px-4 py-1.5 text-[10px] md:text-xs font-black text-primary uppercase italic tracking-widest border border-primary/20 animate-pulse">
+                {minute}&apos; MINUTO
+              </div>
             </div>
 
             {/* Away Team */}
             <div className="flex flex-row-reverse md:flex-col items-center gap-4 flex-1 w-full md:w-auto justify-center md:justify-start">
-              <TeamBadge team={match.awayTeam} size="lg" className="md:w-24 md:h-24" />
+              <div className="h-20 w-20 md:h-24 md:w-24 rounded-full bg-secondary/40 border-2 border-white/5 flex items-center justify-center text-xl font-black text-foreground">
+                {getInitials(away)}
+              </div>
               <div className="text-right md:text-center w-full md:w-auto">
-                <h2 className="text-lg md:text-2xl font-black text-foreground uppercase italic tracking-tighter line-clamp-1">
-                  {match.awayTeam.name}
-                </h2>
+                <h2 className="text-lg md:text-2xl font-black text-foreground uppercase italic tracking-tighter line-clamp-1">{away}</h2>
                 <p className="text-[10px] md:text-xs font-black text-muted-foreground uppercase tracking-widest">Visitante</p>
               </div>
             </div>
           </div>
+
+          {/* Decision Trigger Banner */}
+          {decision?.trigger && (
+            <div className="mx-4 mb-4 rounded-xl border border-primary/30 bg-primary/5 p-3 flex items-center gap-3">
+              <BoltIcon className="h-5 w-5 text-primary fill-current shrink-0" />
+              <div className="flex-1 min-w-0">
+                <p className="text-[11px] font-black uppercase tracking-widest text-primary">
+                  {decision.triggered_by_qte
+                    ? engine?.qte_events?.[0]
+                      ? engine.qte_events[0].type === 'GOAL_IMMINENT'
+                        ? 'Chance de Gol Iminente'
+                        : engine.qte_events[0].type === 'OFFENSIVE_SURGE'
+                        ? 'Surge Ofensivo Detectado'
+                        : 'Caos no Fim de Jogo'
+                      : 'Evento Tático Detectado'
+                    : 'Momento Relevante Detectado pelo Modelo'}
+                </p>
+                <div className="mt-1 flex items-center gap-2">
+                  <div className="flex-1 h-1.5 bg-neutral-800 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-emerald-600 to-primary rounded-full transition-all" style={{ width: `${(decision.score / 1) * 100}%` }} />
+                  </div>
+                  <span className="text-[10px] font-black text-primary tabular-nums">{Math.round(decision.score * 100)}%</span>
+                </div>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -192,15 +255,15 @@ export default function MatchPage({ params }: PageProps) {
         <div className="overflow-x-auto pb-2 scrollbar-hide">
           <TabsList className="flex w-full min-w-[400px] h-12 bg-secondary/50 border border-white/5 p-1 rounded-xl">
             <TabsTrigger value="stats" className="flex-1 font-bold text-xs uppercase tracking-widest">Estatísticas</TabsTrigger>
-            <TabsTrigger value="timeline" className="flex-1 font-bold text-xs uppercase tracking-widest">Timeline</TabsTrigger>
-            <TabsTrigger value="odds" className="flex-1 font-bold text-xs uppercase tracking-widest">Odds</TabsTrigger>
-            <TabsTrigger value="insights" className="flex-1 font-bold text-xs uppercase tracking-widest">Análise IA</TabsTrigger>
+            <TabsTrigger value="analysis" className="flex-1 font-bold text-xs uppercase tracking-widest">Análise IA</TabsTrigger>
+            <TabsTrigger value="shap" className="flex-1 font-bold text-xs uppercase tracking-widest">Explicação</TabsTrigger>
           </TabsList>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-3">
           {/* Main Content */}
           <div className="lg:col-span-2 space-y-6">
+
             <TabsContent value="stats" className="mt-0 outline-none">
               <Card className="border-border bg-card rounded-2xl overflow-hidden shadow-lg shadow-black/20">
                 <CardHeader className="border-b border-white/5 pb-4">
@@ -208,62 +271,151 @@ export default function MatchPage({ params }: PageProps) {
                     Estatísticas da Partida
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-6">
-                  <MatchStats
-                    stats={match.stats}
-                    homeColor={match.homeTeam.primaryColor}
-                    awayColor={match.awayTeam.primaryColor}
-                  />
+                <CardContent className="pt-6 space-y-5">
+                  {stats ? (
+                    <>
+                      <StatBar label="Posse de Bola (%)" home={stats.possession[0]} away={stats.possession[1]} />
+                      <StatBar label="Ataques" home={stats.attacks[0]} away={stats.attacks[1]} />
+                      <StatBar label="Ataques Perigosos" home={stats.dangerous_attacks[0]} away={stats.dangerous_attacks[1]} />
+                      <StatBar label="Chutes no Gol" home={stats.shots_on_target[0]} away={stats.shots_on_target[1]} />
+                    </>
+                  ) : (
+                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground text-center py-8 animate-pulse">
+                      Aguardando dados do jogo...
+                    </p>
+                  )}
+
+                  {engine?.indicators && (
+                    <div className="mt-6 pt-5 border-t border-white/5 space-y-4">
+                      <h4 className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Indicadores de Pressão IA</h4>
+                      <PressureBar label={`Pressão Ofensiva — ${home}`} value={engine.indicators.offensive_pressure.home} />
+                      <PressureBar label={`Pressão Ofensiva — ${away}`} value={engine.indicators.offensive_pressure.away} />
+                      <div className="grid grid-cols-2 gap-3 pt-2">
+                        <div className="rounded-xl bg-secondary/40 p-3 border border-white/5">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Momentum</p>
+                          <p className="text-sm font-black text-primary tabular-nums mt-0.5">
+                            {engine.indicators.momentum_index > 0.5 ? home : away}
+                            <span className="text-[9px] text-neutral-500 ml-1 font-bold normal-case">dominando</span>
+                          </p>
+                        </div>
+                        <div className="rounded-xl bg-secondary/40 p-3 border border-white/5">
+                          <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500">Abertura</p>
+                          <p className="text-sm font-black text-foreground tabular-nums mt-0.5">
+                            {Math.round(engine.indicators.game_openness * 100)}%
+                            <span className="text-[9px] text-neutral-500 ml-1 font-bold normal-case">volatilidade</span>
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
 
-            <TabsContent value="timeline" className="mt-0 outline-none">
-              <Card className="border-border bg-card rounded-2xl overflow-hidden shadow-lg shadow-black/20">
-                <CardHeader className="border-b border-white/5 pb-4">
-                  <CardTitle className="text-base md:text-lg font-black uppercase text-foreground italic tracking-tight">
-                    Timeline de Eventos
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <MatchTimeline events={match.events} />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="odds" className="mt-0 outline-none">
-              <Card className="border-border bg-card rounded-2xl overflow-hidden shadow-lg shadow-black/20">
-                <CardHeader className="border-b border-white/5 pb-4">
-                  <CardTitle className="text-base md:text-lg font-black uppercase text-foreground italic tracking-tight">
-                    Principais Odds
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-6">
-                  <OddsPanel
-                    odds={match.odds}
-                    homeTeamName={match.homeTeam.shortName}
-                    awayTeamName={match.awayTeam.shortName}
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="insights" className="mt-0 outline-none">
+            <TabsContent value="analysis" className="mt-0 outline-none">
               <Card className="border-border bg-card rounded-2xl overflow-hidden shadow-lg shadow-black/20">
                 <CardHeader className="border-b border-white/5 pb-4">
                   <CardTitle className="text-base md:text-lg font-black uppercase text-foreground italic tracking-tight">
                     Análise POCK-IA
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="pt-6">
-                  {insight ? (
-                    <MatchInsights insight={insight} />
+                <CardContent className="pt-6 space-y-5">
+                  {model ? (
+                    <>
+                      {[
+                        { label: 'Probabilidade de Gol', value: model.goal_prob, color: 'from-red-700 to-red-500' },
+                        { label: 'Probabilidade de Escanteio', value: model.corner_prob, color: 'from-orange-700 to-orange-500' },
+                        { label: 'Índice de Pressão', value: model.pressure_index, color: 'from-emerald-700 to-primary' },
+                      ].map(({ label, value, color }) => (
+                        <div key={label} className="space-y-1">
+                          <div className="flex items-center justify-between text-[10px] font-black uppercase">
+                            <span className="text-neutral-500 tracking-widest">{label}</span>
+                            <span className="text-foreground">{Math.round(value * 100)}%</span>
+                          </div>
+                          <div className="h-2.5 rounded-full bg-neutral-800 overflow-hidden">
+                            <div className={`h-full bg-gradient-to-r ${color} rounded-full transition-all duration-700`} style={{ width: `${value * 100}%` }} />
+                          </div>
+                        </div>
+                      ))}
+
+                      {engine?.qte_events && engine.qte_events.length > 0 && (
+                        <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                          <h4 className="text-[10px] font-black uppercase tracking-widest text-neutral-500">Eventos Táticos Detectados</h4>
+                          {engine.qte_events.map((qte, i) => {
+                            const colorMap = {
+                              GOAL_IMMINENT: 'border-red-700/40 bg-red-900/10 text-red-400',
+                              OFFENSIVE_SURGE: 'border-orange-700/40 bg-orange-900/10 text-orange-400',
+                              LATE_GAME_CHAOS: 'border-yellow-700/40 bg-yellow-900/10 text-yellow-400',
+                            }
+                            const c = colorMap[qte.type as keyof typeof colorMap] ?? 'border-primary/40 bg-primary/10 text-primary'
+                            return (
+                              <div key={i} className={cn('rounded-xl border p-3 space-y-2', c)}>
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[10px] font-black uppercase tracking-widest">
+                                    {qte.type === 'GOAL_IMMINENT' ? '🔴 Gol Iminente' : qte.type === 'OFFENSIVE_SURGE' ? '🟠 Surge Ofensivo' : '🟡 Caos Final'}
+                                    {qte.team_name ? ` — ${qte.team_name}` : ''}
+                                  </span>
+                                  <span className="text-[10px] font-black">{Math.round(qte.confidence * 100)}%</span>
+                                </div>
+                                <div className="space-y-1">
+                                  {qte.reasons.map((r, ri) => (
+                                    <p key={ri} className="text-[10px] font-bold text-neutral-400 flex items-start gap-1.5">
+                                      <span className="mt-0.5 shrink-0">›</span> {r}
+                                    </p>
+                                  ))}
+                                </div>
+                              </div>
+                            )
+                          })}
+                        </div>
+                      )}
+                    </>
                   ) : (
-                    <div className="py-12 text-center">
-                      <p className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground animate-pulse">
-                        Insights sendo processados...
+                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground text-center py-8 animate-pulse">
+                      Aguardando snapshot da partida...
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="shap" className="mt-0 outline-none">
+              <Card className="border-border bg-card rounded-2xl overflow-hidden shadow-lg shadow-black/20">
+                <CardHeader className="border-b border-white/5 pb-4">
+                  <CardTitle className="text-base md:text-lg font-black uppercase text-foreground italic tracking-tight">
+                    Explicabilidade SHAP
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6">
+                  {shap?.available && shap.reasons.length > 0 ? (
+                    <div className="space-y-4">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-neutral-500">
+                        Top fatores que influenciam a decisão do modelo
                       </p>
+                      {shap.reasons.map((r, i) => {
+                        const positive = r.direction.toLowerCase().includes('aumenta')
+                        return (
+                          <div key={i} className="flex items-center gap-3 rounded-xl bg-secondary/30 p-3 border border-white/5">
+                            <div className={cn('flex h-8 w-8 shrink-0 items-center justify-center rounded-full border', positive ? 'border-primary/30 bg-primary/10' : 'border-red-700/30 bg-red-900/10')}>
+                              {i === 0 && <ArrowTrendingUpIcon className={cn('h-4 w-4', positive ? 'text-primary' : 'text-red-400')} />}
+                              {i === 1 && <ChartBarIcon className={cn('h-4 w-4', positive ? 'text-primary' : 'text-red-400')} />}
+                              {i >= 2 && <FireIcon className={cn('h-4 w-4', positive ? 'text-primary' : 'text-red-400')} />}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-[11px] font-black text-foreground uppercase tracking-tight">{r.label}</p>
+                              <p className="text-[10px] font-bold text-neutral-500">{r.direction}</p>
+                            </div>
+                            <span className={cn('text-[11px] font-black tabular-nums', positive ? 'text-primary' : 'text-red-400')}>
+                              {r.contribution_pct}
+                            </span>
+                          </div>
+                        )
+                      })}
                     </div>
+                  ) : (
+                    <p className="text-xs font-black uppercase tracking-widest text-muted-foreground text-center py-8 animate-pulse">
+                      {inference ? 'SHAP não disponível para este jogo' : 'Aguardando snapshot...'}
+                    </p>
                   )}
                 </CardContent>
               </Card>
@@ -272,70 +424,79 @@ export default function MatchPage({ params }: PageProps) {
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Quick Odds */}
-            <Card className="border-border bg-card rounded-2xl shadow-lg">
-              <CardHeader className="border-b border-white/5 pb-3">
-                <CardTitle className="text-[10px] md:text-xs font-black uppercase text-muted-foreground tracking-widest">
-                  Quick Odds
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-4">
-                <div className="flex items-center justify-between rounded-xl bg-secondary/40 p-3 border border-white/5 group transition-all hover:bg-secondary/60">
-                  <span className="text-[10px] font-black uppercase text-neutral-500 tracking-tighter">Resultado Final</span>
-                  <div className="flex gap-1.5">
-                    <Badge variant="outline" className="font-mono text-xs bg-black/20 border-white/5 py-1 px-2">
-                      {match.odds.homeWin.toFixed(2)}
-                    </Badge>
-                    <Badge variant="outline" className="font-mono text-xs bg-black/20 border-white/5 py-1 px-2">
-                      {match.odds.draw.toFixed(2)}
-                    </Badge>
-                    <Badge variant="outline" className="font-mono text-xs bg-black/20 border-white/5 py-1 px-2">
-                      {match.odds.awayWin.toFixed(2)}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="flex flex-col gap-1.5 rounded-xl bg-secondary/40 p-3 border border-white/5 group hover:bg-secondary/60">
-                    <span className="text-[10px] font-black uppercase text-neutral-500 tracking-tighter">Over 2.5</span>
-                    <Badge className="bg-primary/10 text-primary font-mono border-0 w-fit text-[11px]">
-                      {match.odds.over25.toFixed(2)}
-                    </Badge>
-                  </div>
-                  <div className="flex flex-col gap-1.5 rounded-xl bg-secondary/40 p-3 border border-white/5 group hover:bg-secondary/60">
-                    <span className="text-[10px] font-black uppercase text-neutral-500 tracking-tighter">BTTS</span>
-                    <Badge className="bg-primary/10 text-primary font-mono border-0 w-fit text-[11px]">
-                      {match.odds.btts.toFixed(2)}
-                    </Badge>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-
-            {/* AI Insight Card */}
-            {insight && (
-              <Card className="border-primary/30 bg-primary/5 rounded-2xl shadow-[0_0_30px_rgba(var(--primary),0.1)] overflow-hidden relative group">
-                <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-primary to-transparent opacity-50" />
-                <CardHeader className="pb-2">
-                  <CardTitle className="flex items-center gap-2 text-[10px] font-black uppercase text-primary italic tracking-widest leading-none">
-                    <div className="h-2 w-2 animate-pulse rounded-full bg-primary shadow-[0_0_8px_theme(colors.primary)]" />
-                    Insight em Tempo Real
+            {/* Decision Score */}
+            {decision && (
+              <Card className="border-border bg-card rounded-2xl shadow-lg overflow-hidden">
+                <CardHeader className="border-b border-white/5 pb-3">
+                  <CardTitle className="text-[10px] md:text-xs font-black uppercase text-muted-foreground tracking-widest">
+                    Score do Modelo
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <p className="text-xs md:text-sm font-bold text-foreground leading-relaxed">
-                    {insight.prediction}
-                  </p>
-                  <div className="mt-4 flex items-center gap-3">
-                    <div className="h-2 flex-1 overflow-hidden rounded-full bg-primary/10 border border-primary/20">
-                      <div
-                        className="h-full rounded-full bg-gradient-to-r from-emerald-600 to-primary shadow-[0_0_10px_theme(colors.primary)]"
-                        style={{ width: `${insight.probability * 100}%` }}
-                      />
-                    </div>
-                    <span className="text-[11px] font-black text-primary italic leading-none">
-                      {Math.round(insight.probability * 100)}%
-                    </span>
+                <CardContent className="space-y-3 pt-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Score</span>
+                    <span className="font-mono text-sm font-bold text-foreground">{decision.score.toFixed(3)}</span>
                   </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Threshold</span>
+                    <span className="font-mono text-sm font-bold text-foreground">{decision.threshold.toFixed(2)}</span>
+                  </div>
+                  <div className="h-2.5 rounded-full bg-neutral-800 overflow-hidden">
+                    <div
+                      className={cn('h-full rounded-full transition-all duration-700', decision.trigger ? 'bg-gradient-to-r from-emerald-600 to-primary' : 'bg-neutral-600')}
+                      style={{ width: `${Math.min(decision.score * 100, 100)}%` }}
+                    />
+                  </div>
+                  <Badge className={cn('w-full justify-center font-black uppercase italic tracking-widest text-[10px]', decision.trigger ? 'bg-primary/20 text-primary border-primary/30' : 'bg-neutral-800 text-neutral-400 border-white/5')}>
+                    {decision.trigger ? '⚡ ALERTA ATIVO' : 'Monitorando...'}
+                  </Badge>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Model Probabilities */}
+            {model && (
+              <Card className="border-border bg-card rounded-2xl shadow-lg">
+                <CardHeader className="border-b border-white/5 pb-3">
+                  <CardTitle className="text-[10px] md:text-xs font-black uppercase text-muted-foreground tracking-widest">
+                    Previsões do Modelo
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-4">
+                  {[
+                    { label: 'Prob. Gol', val: model.goal_prob },
+                    { label: 'Prob. Escanteio', val: model.corner_prob },
+                    { label: 'Pressão', val: model.pressure_index },
+                  ].map(({ label, val }) => (
+                    <div key={label} className="flex items-center justify-between rounded-xl bg-secondary/40 p-3 border border-white/5">
+                      <span className="text-[10px] font-black uppercase text-neutral-500 tracking-tighter">{label}</span>
+                      <Badge className="bg-primary/10 text-primary font-mono border-0 w-fit text-[11px]">
+                        {Math.round(val * 100)}%
+                      </Badge>
+                    </div>
+                  ))}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Drift */}
+            {drift !== null && drift !== undefined && (
+              <Card className="border-border bg-card rounded-2xl shadow-lg">
+                <CardHeader className="border-b border-white/5 pb-3">
+                  <CardTitle className="text-[10px] md:text-xs font-black uppercase text-muted-foreground tracking-widest">
+                    Variação (Drift)
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-4">
+                  {drift.has_previous ? (
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black uppercase text-neutral-500 tracking-widest">Δ Features</p>
+                      <p className="text-lg font-black text-foreground tabular-nums">{drift.l1_sum_abs_delta.toFixed(4)}</p>
+                      <p className="text-[9px] font-bold text-neutral-600">Variação total das features nos últimos 60s</p>
+                    </div>
+                  ) : (
+                    <p className="text-[10px] font-bold text-neutral-600 italic">Primeira chamada — sem referência anterior</p>
+                  )}
                 </CardContent>
               </Card>
             )}

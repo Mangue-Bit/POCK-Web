@@ -1,13 +1,65 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
-import type { Notification } from './types'
-import { mockNotifications } from './mock-data'
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  type ReactNode,
+} from 'react'
+import type { Notification, InsightType } from './types'
+import { fetchNotifications, type ApiNotification } from './api'
+
+// ─── Map API notification type → UI InsightType ────────────────
+
+function mapType(apiType: ApiNotification['type']): InsightType {
+  switch (apiType) {
+    case 'goal_alert':
+      return 'opportunity'
+    case 'pressure_alert':
+      return 'momentum'
+    case 'chaos_alert':
+      return 'warning'
+    default:
+      return 'info'
+  }
+}
+
+function buildTitle(n: ApiNotification): string {
+  switch (n.type) {
+    case 'goal_alert':
+      return n.triggered_by_qte && n.qte_events?.[0]?.team_name
+        ? `${n.qte_events[0].team_name} — Chance de Gol`
+        : 'Alta Prob. de Gol'
+    case 'pressure_alert':
+      return 'Surge Ofensivo Detectado'
+    case 'chaos_alert':
+      return 'Caos no Fim de Jogo'
+    default:
+      return 'Alerta de Partida'
+  }
+}
+
+function apiNotifToUi(n: ApiNotification, idx: number): Notification {
+  return {
+    id: n.id ?? `api-notif-${idx}-${n.timestamp}`,
+    matchId: n.match_id,
+    type: mapType(n.type),
+    title: buildTitle(n),
+    message: n.message,
+    timestamp: new Date(n.timestamp),
+    read: false,
+    confidence: Math.round(n.confidence * 100),
+  }
+}
+
+// ─── Context ───────────────────────────────────────────────────
 
 interface NotificationContextType {
   notifications: Notification[]
   unreadCount: number
-  addNotification: (notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => void
   markAsRead: (id: string) => void
   markAllAsRead: () => void
   clearNotification: (id: string) => void
@@ -18,26 +70,15 @@ interface NotificationContextType {
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined)
 
 export function NotificationProvider({ children }: { children: ReactNode }) {
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications)
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const [latestNotification, setLatestNotification] = useState<Notification | null>(null)
+  // Store IDs already ingested from the API to avoid duplicates
+  const seenIds = useRef<Set<string>>(new Set())
 
   const unreadCount = notifications.filter(n => !n.read).length
 
-  const addNotification = useCallback((notification: Omit<Notification, 'id' | 'timestamp' | 'read'>) => {
-    const newNotification: Notification = {
-      ...notification,
-      id: `notif-${Date.now()}`,
-      timestamp: new Date(),
-      read: false,
-    }
-    setNotifications(prev => [newNotification, ...prev])
-    setLatestNotification(newNotification)
-  }, [])
-
   const markAsRead = useCallback((id: string) => {
-    setNotifications(prev =>
-      prev.map(n => (n.id === id ? { ...n, read: true } : n))
-    )
+    setNotifications(prev => prev.map(n => (n.id === id ? { ...n, read: true } : n)))
   }, [])
 
   const markAllAsRead = useCallback(() => {
@@ -52,53 +93,47 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     setLatestNotification(null)
   }, [])
 
-  // Simulate real-time notifications
+  // ── Poll /notifications every 7s ──────────────────────────
   useEffect(() => {
-    const insightMessages = [
-      {
-        type: 'opportunity' as const,
-        title: 'Oportunidade Detectada',
-        message: 'Alta probabilidade de gol nos próximos 10 minutos baseado em xG e pressão ofensiva.',
-        matchId: 'match-1',
-        confidence: 72,
-      },
-      {
-        type: 'warning' as const,
-        title: 'Mudança de Padrão',
-        message: 'Time visitante aumentando intensidade. Considere ajustar estratégia.',
-        matchId: 'match-2',
-        confidence: 65,
-      },
-      {
-        type: 'momentum' as const,
-        title: 'Momentum Shift',
-        message: 'Modelo SHAP indica mudança significativa no fluxo do jogo.',
-        matchId: 'match-1',
-        confidence: 68,
-      },
-      {
-        type: 'info' as const,
-        title: 'Estatística Relevante',
-        message: 'Histórico mostra 80% dos jogos com essas características terminam com mais de 2.5 gols.',
-        matchId: 'match-3',
-        confidence: 80,
-      },
-    ]
+    let cancelled = false
 
-    const interval = setInterval(() => {
-      const randomInsight = insightMessages[Math.floor(Math.random() * insightMessages.length)]
-      addNotification(randomInsight)
-    }, 45000) // New notification every 45 seconds
+    async function pollNotifications() {
+      try {
+        const raw = await fetchNotifications(20)
+        if (cancelled) return
 
-    return () => clearInterval(interval)
-  }, [addNotification])
+        const newOnes: Notification[] = []
+        for (let i = 0; i < raw.length; i++) {
+          const n = raw[i]
+          const ui = apiNotifToUi(n, i)
+          if (!seenIds.current.has(ui.id)) {
+            seenIds.current.add(ui.id)
+            newOnes.push(ui)
+          }
+        }
 
-  // Auto-dismiss latest notification after 8 seconds
+        if (newOnes.length > 0) {
+          setNotifications(prev => [...newOnes, ...prev])
+          // Show the most recent as toast
+          setLatestNotification(newOnes[0])
+        }
+      } catch {
+        // API unavailable — keep current list
+      }
+    }
+
+    pollNotifications()
+    const interval = setInterval(pollNotifications, 7000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [])
+
+  // Auto-dismiss latest toast after 8s
   useEffect(() => {
     if (latestNotification) {
-      const timeout = setTimeout(() => {
-        setLatestNotification(null)
-      }, 8000)
+      const timeout = setTimeout(() => setLatestNotification(null), 8000)
       return () => clearTimeout(timeout)
     }
   }, [latestNotification])
@@ -108,7 +143,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
       value={{
         notifications,
         unreadCount,
-        addNotification,
         markAsRead,
         markAllAsRead,
         clearNotification,
@@ -123,8 +157,6 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
 
 export function useNotifications() {
   const context = useContext(NotificationContext)
-  if (!context) {
-    throw new Error('useNotifications must be used within a NotificationProvider')
-  }
+  if (!context) throw new Error('useNotifications must be used within a NotificationProvider')
   return context
 }

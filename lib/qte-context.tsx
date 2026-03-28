@@ -1,144 +1,226 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react'
-import type { QteEvent, BettingProfile } from './types'
+import {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useEffect,
+  useRef,
+  type ReactNode,
+} from 'react'
+import type { LiveQteEvent, ApiQteType } from './types'
 import { useUser } from './user-context'
-import { mockMatches } from './mock-data'
+import { fetchMatches, fetchInference, type ApiQteEvent } from './api'
+
+// ─── Helpers ───────────────────────────────────────────────────
+
+function buildLiveQteEvent(
+  matchId: string,
+  qte: ApiQteEvent,
+  ctx: {
+    home: string
+    away: string
+    score: string
+    minute: number
+    league: string
+    goalProb: number
+    pressureIndex: number
+    decisionScore: number
+    triggeredByScore: boolean
+    triggeredByQte: boolean
+  },
+): LiveQteEvent {
+  const teamLabel = qte.team_name ?? ''
+
+  const titles: Record<ApiQteType, string> = {
+    GOAL_IMMINENT: teamLabel ? `${teamLabel} — Chance de Gol Iminente` : 'Chance de Gol Iminente',
+    OFFENSIVE_SURGE: teamLabel ? `Surge Ofensivo de ${teamLabel}` : 'Surge Ofensivo',
+    LATE_GAME_CHAOS: 'Caos no Fim — Jogo Aberto',
+  }
+
+  const messages: Record<ApiQteType, string> = {
+    GOAL_IMMINENT: `IA detectou pressão intensa. ${Math.round(qte.confidence * 100)}% de confiança em gol iminente.`,
+    OFFENSIVE_SURGE: `Surge ofensivo detectado pelo motor de decisão. Confiança: ${Math.round(qte.confidence * 100)}%.`,
+    LATE_GAME_CHAOS: `Jogo aberto e instável no fim. Alta voltabilidade — ${Math.round(qte.confidence * 100)}% de confiança.`,
+  }
+
+  const colors: Record<ApiQteType, LiveQteEvent['color']> = {
+    GOAL_IMMINENT: 'red',
+    OFFENSIVE_SURGE: 'orange',
+    LATE_GAME_CHAOS: 'yellow',
+  }
+
+  const duration = Math.min(Math.max(qte.valid_for_seconds, 20), 120)
+
+  return {
+    id: `live-qte-${matchId}-${qte.type}-${Date.now()}`,
+    matchId,
+    apiType: qte.type as ApiQteType,
+    teamName: qte.team_name,
+    teamSide: qte.team_side,
+    confidence: qte.confidence,
+    validForSeconds: qte.valid_for_seconds,
+    reasons: qte.reasons,
+    title: titles[qte.type as ApiQteType],
+    message: messages[qte.type as ApiQteType],
+    color: colors[qte.type as ApiQteType],
+    duration,
+    ...ctx,
+  }
+}
+
+// ─── Context ───────────────────────────────────────────────────
 
 interface QteContextType {
-  activeQte: QteEvent | null
-  triggerQte: (type: 'goal' | 'card' | 'corner' | 'foul') => void
-  dismissQte: () => void
+  activeLiveQte: LiveQteEvent | null
+  dismissLiveQte: () => void
+  /** Live match IDs from /matches (refreshed every 5s) */
+  liveMatchIds: string[]
 }
 
 const QteContext = createContext<QteContextType | undefined>(undefined)
 
 export function QteProvider({ children }: { children: ReactNode }) {
   const { user } = useUser()
-  const [activeQte, setActiveQte] = useState<QteEvent | null>(null)
+  const [activeLiveQte, setActiveLiveQte] = useState<LiveQteEvent | null>(null)
+  const [liveMatchIds, setLiveMatchIds] = useState<string[]>([])
 
-  const dismissQte = useCallback(() => {
-    setActiveQte(null)
+  // Track which QTE keys have already been shown so we don't re-fire duplicates
+  const seenQteKeys = useRef<Set<string>>(new Set())
+  // Track whether a QTE is currently active (ref for closure safety)
+  const activeRef = useRef<LiveQteEvent | null>(null)
+
+  const dismissLiveQte = useCallback(() => {
+    setActiveLiveQte(null)
+    activeRef.current = null
   }, [])
 
-  const triggerQte = useCallback((type: 'goal' | 'card' | 'corner' | 'foul') => {
-    setActiveQte((currentQte) => {
-      if (currentQte) {
-        return currentQte
-      }
-
-      const profile = user.bettingProfile
-    
-    // Config based on profile
-    const config = ({
-      conservador: {
-        minConfidence: 75,
-        duration: 30,
-        goalLabel: 'Aposta Segura',
-        cardLabel: 'Analisar Jogo',
-        cornerLabel: 'Mais de 8.5 Cantos',
-        foulLabel: 'Menos de 20 Faltas',
-      },
-      moderado: {
-        minConfidence: 65,
-        duration: 30,
-        goalLabel: 'GOL AGORA!',
-        cardLabel: 'Cartão Iminente',
-        cornerLabel: 'Canto nos próximos 5m',
-        foulLabel: 'Próxima falta será casa',
-      },
-      agressivo: {
-        minConfidence: 55,
-        duration: 30,
-        goalLabel: 'ALL IN GOL',
-        cardLabel: 'PREDIÇÃO VERMELHO',
-        cornerLabel: 'COMBO ESCANTEIOS',
-        foulLabel: 'EXPULSÃO POR FALTA',
-      }
-    }[profile] || {
-      minConfidence: 65,
-      duration: 30,
-      goalLabel: 'GOL AGORA!',
-      cardLabel: 'Cartão Iminente',
-      cornerLabel: 'Canto nos próximos 5m',
-      foulLabel: 'Próxima falta será casa',
-    })
-
-      const confidence = Math.floor(Math.random() * (100 - config.minConfidence + 1)) + config.minConfidence
-
-      const randomMatch = mockMatches[Math.floor(Math.random() * mockMatches.length)]
-      const matchId = randomMatch.id
-
-      const id = `qte-${Date.now()}`
-      const event: QteEvent = {
-        id,
-        matchId,
-        type,
-        title: {
-          goal: 'Quick Bet: GOAL',
-          card: 'Quick Bet: CARD',
-          corner: 'Quick Bet: CORNER',
-          foul: 'Quick Bet: FOUL'
-        }[type],
-        message: {
-          goal: `Pressao total no ataque! ${confidence}% de chance de gol nos proximos 3 minutos.`,
-          card: `Clima quente em campo! ${confidence}% de chance de cartao nos proximos 5 minutos.`,
-          corner: `Muitos cruzamentos na area! ${confidence}% de chance de escanteio agora.`,
-          foul: `Jogo truncado no meio-campo! ${confidence}% de chance de falta em breve.`
-        }[type],
-        duration: config.duration,
-        confidence,
-        actions: {
-          goal: [{ label: config.goalLabel, action: 'bet_goal', odds: profile === 'agressivo' ? 3.5 : 1.8 }],
-          card: [{ label: config.cardLabel, action: 'bet_card', odds: profile === 'agressivo' ? 4.2 : 2.1 }],
-          corner: [{ label: config.cornerLabel, action: 'bet_corner', odds: profile === 'agressivo' ? 2.5 : 1.4 }],
-          foul: [{ label: config.foulLabel, action: 'bet_foul', odds: profile === 'agressivo' ? 5.8 : 2.8 }]
-        }[type],
-        timestamp: new Date(),
-        reasons: {
-          goal: [
-            'Alto numero de ataques perigosos do time da casa',
-            'Multiplas finalizacoes no gol nos ultimos minutos',
-            'Pressao ofensiva intensa detectada pela IA'
-          ],
-          card: [
-            'Aumento na frequencia de faltas taticas',
-            'Clima de tensao entre jogadores detectado',
-            'Arbitro com media alta de cartoes por partida'
-          ],
-          corner: [
-            'Time explora as laterais com frequencia',
-            'Volume alto de cruzamentos na area',
-            'Defesa adversaria priorizando corte pra linha de fundo'
-          ],
-          foul: [
-            'Disputas fisicas intensas no meio-campo',
-            'Historico de rivalidade entre as equipes',
-            'Estilo de jogo agressivo de ambos os times'
-          ]
-        }[type]
-      }
-
-      return event
-    })
-  }, [user.bettingProfile])
-
-  // Simulation
+  // ── Poll /matches every 5s ─────────────────────────────────
   useEffect(() => {
-    const interval = setInterval(() => {
-      const shouldTrigger = Math.random() > 0.6 // Slightly more frequent for demo
-      if (shouldTrigger && !activeQte) {
-        const types: ('goal' | 'card' | 'corner' | 'foul')[] = ['goal', 'card', 'corner', 'foul']
-        const randomType = types[Math.floor(Math.random() * types.length)]
-        triggerQte(randomType)
-      }
-    }, 20000)
+    let cancelled = false
 
-    return () => clearInterval(interval)
-  }, [activeQte, triggerQte])
+    async function pollMatches() {
+      try {
+        const matches = await fetchMatches()
+        if (!cancelled) {
+          setLiveMatchIds(matches.map(m => m.match_id))
+        }
+      } catch {
+        // API not reachable — keep previous list
+      }
+    }
+
+    pollMatches()
+    const interval = setInterval(pollMatches, 5000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [])
+
+  // ── Poll /inference every 10s for followed live matches ────
+  useEffect(() => {
+    if (liveMatchIds.length === 0) return
+
+    const targets = liveMatchIds.filter(id => user.followedMatches.includes(id))
+    if (targets.length === 0) return
+
+    let cancelled = false
+
+    const profileMap: Record<string, 'moderate' | 'aggressive' | 'conservative'> = {
+      moderado: 'moderate',
+      agressivo: 'aggressive',
+      conservador: 'conservative',
+    }
+    const profile = profileMap[user.bettingProfile] ?? 'moderate'
+
+    async function pollInference() {
+      for (const matchId of targets) {
+        if (cancelled) break
+        try {
+          const data = await fetchInference(matchId, profile)
+          if (!data || cancelled) continue
+
+          const { decision, decision_engine, snapshot_context, model_outputs } = data
+
+          if (!decision.trigger) continue
+
+          const qteEvents = decision_engine?.qte_events ?? []
+
+          if (qteEvents.length > 0) {
+            for (const qte of qteEvents) {
+              const key = `${matchId}-${qte.type}-${snapshot_context.minute}`
+              if (seenQteKeys.current.has(key)) continue
+              seenQteKeys.current.add(key)
+
+              if (activeRef.current) continue
+
+              const event = buildLiveQteEvent(matchId, qte, {
+                home: snapshot_context.home,
+                away: snapshot_context.away,
+                score: snapshot_context.score,
+                minute: snapshot_context.minute,
+                league: snapshot_context.league,
+                goalProb: model_outputs?.model_predict?.goal_prob ?? 0,
+                pressureIndex: model_outputs?.model_predict?.pressure_index ?? 0,
+                decisionScore: decision.score,
+                triggeredByScore: decision.triggered_by_score,
+                triggeredByQte: decision.triggered_by_qte,
+              })
+
+              setActiveLiveQte(event)
+              activeRef.current = event
+              break
+            }
+          } else if (decision.triggered_by_score && !activeRef.current) {
+            const key = `${matchId}-score-${snapshot_context.minute}`
+            if (!seenQteKeys.current.has(key)) {
+              seenQteKeys.current.add(key)
+
+              const syntheticQte: ApiQteEvent = {
+                type: 'GOAL_IMMINENT',
+                team_name: null,
+                team_side: null,
+                confidence: decision.score,
+                valid_for_seconds: 60,
+                reasons: ['Modelo ML detectou momento relevante', `Score: ${decision.score.toFixed(2)}`],
+              }
+
+              const event = buildLiveQteEvent(matchId, syntheticQte, {
+                home: snapshot_context.home,
+                away: snapshot_context.away,
+                score: snapshot_context.score,
+                minute: snapshot_context.minute,
+                league: snapshot_context.league,
+                goalProb: model_outputs?.model_predict?.goal_prob ?? 0,
+                pressureIndex: model_outputs?.model_predict?.pressure_index ?? 0,
+                decisionScore: decision.score,
+                triggeredByScore: true,
+                triggeredByQte: false,
+              })
+
+              const greenEvent: LiveQteEvent = { ...event, color: 'green', title: 'Momento Relevante Detectado' }
+              setActiveLiveQte(greenEvent)
+              activeRef.current = greenEvent
+            }
+          }
+        } catch {
+          // ignore per-match errors
+        }
+      }
+    }
+
+    pollInference()
+    const interval = setInterval(pollInference, 10000)
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+    }
+  }, [liveMatchIds, user.followedMatches, user.bettingProfile])
 
   return (
-    <QteContext.Provider value={{ activeQte, triggerQte, dismissQte }}>
+    <QteContext.Provider value={{ activeLiveQte, dismissLiveQte, liveMatchIds }}>
       {children}
     </QteContext.Provider>
   )
@@ -146,8 +228,6 @@ export function QteProvider({ children }: { children: ReactNode }) {
 
 export function useQte() {
   const context = useContext(QteContext)
-  if (!context) {
-    throw new Error('useQte must be used within a QteProvider')
-  }
+  if (!context) throw new Error('useQte must be used within a QteProvider')
   return context
 }
