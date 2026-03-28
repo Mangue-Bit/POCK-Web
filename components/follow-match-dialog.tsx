@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input'
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -53,6 +54,9 @@ export function FollowMatchDialog({ children }: { children: React.ReactNode }) {
   const [statusFilter, setStatusFilter] = useState<string>('all')
 
   const filteredMatches = mockMatches.filter((match) => {
+    // Always exclude finished matches from the "Follow New Games" pool
+    if (match.status === 'finished') return false
+
     const matchesSearch = 
       match.homeTeam.name.toLowerCase().includes(search.toLowerCase()) ||
       match.awayTeam.name.toLowerCase().includes(search.toLowerCase())
@@ -72,7 +76,6 @@ export function FollowMatchDialog({ children }: { children: React.ReactNode }) {
     { label: 'Todos', value: 'all' },
     { label: 'Ao Vivo', value: 'live' },
     { label: 'Em Breve', value: 'scheduled' },
-    { label: 'Finalizados', value: 'finished' },
   ]
 
   return (
@@ -81,177 +84,169 @@ export function FollowMatchDialog({ children }: { children: React.ReactNode }) {
         {children}
       </DialogTrigger>
       <DialogContent 
-        className="sm:max-w-[850px] p-0 overflow-hidden border-none shadow-[0_0_50px_rgba(0,0,0,0.3)] bg-background rounded-2xl"
+        className="fixed inset-0 z-[100] translate-x-0 translate-y-0 top-0 left-0 w-full h-full max-w-none flex flex-col border-none bg-[#0c0c0c] p-0 sm:top-[50%] sm:left-[50%] sm:right-auto sm:bottom-auto sm:translate-x-[-50%] sm:translate-y-[-50%] sm:w-[95%] sm:max-w-[850px] sm:h-auto sm:max-h-[85vh] sm:rounded-3xl sm:border sm:border-white/5 sm:shadow-[0_0_100px_rgba(0,0,0,0.8)]"
         showCloseButton={false}
       >
-        <DialogHeader className="p-6 pb-4 bg-primary/5 border-b border-border">
-          <div className="flex items-center justify-between gap-3">
+        <div className="flex flex-col h-full bg-[#0c0c0c]">
+          {/* Header */}
+          <div className="p-4 md:p-6 bg-primary/5 border-b border-white/5 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 shadow-[0_0_15px_rgba(var(--primary),0.2)]">
                 <TrophyIcon className="h-5 w-5 text-primary" />
               </div>
               <div>
-                <DialogTitle className="text-xl font-black uppercase tracking-tight">Explorar Jogos</DialogTitle>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-widest font-black">
-                  Siga novas partidas para receber insights
-                </p>
+                <DialogTitle className="text-lg md:text-2xl font-black uppercase tracking-tight italic text-white line-clamp-1">
+                  EXPLORAR <span className="text-primary italic">IA RADAR</span>
+                </DialogTitle>
+                <DialogDescription className="text-[9px] text-neutral-500 uppercase tracking-widest font-black italic">
+                  BUSCANDO TRANSMISSÕES DISPONÍVEIS
+                </DialogDescription>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="rounded-full">
-              <XMarkIcon className="h-4 w-4" />
+            <Button variant="ghost" size="icon" onClick={() => setOpen(false)} className="rounded-full bg-white/5 hover:bg-white/10 text-neutral-400">
+              <XMarkIcon className="h-5 w-5" />
             </Button>
           </div>
-        </DialogHeader>
 
-        {/* Search & Filters */}
-        <div className="px-6 py-4 border-b border-border/40 bg-muted/5 space-y-4">
-          <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar por time..." 
-              className="pl-10 h-10 bg-background border-border/50 focus-visible:ring-primary/30 font-medium"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar">
-            {filterOptions.map((opt) => (
-              <Button
-                key={opt.value}
-                variant={statusFilter === opt.value ? "default" : "outline"}
-                size="sm"
-                className={cn(
-                  "h-8 px-3 text-[10px] font-black uppercase tracking-wider rounded-full border-border/40 transition-all",
-                  statusFilter === opt.value ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "hover:bg-accent/50"
-                )}
-                onClick={() => setStatusFilter(opt.value)}
-              >
-                {opt.label}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        <ScrollArea className="h-[430px] px-6 py-4">
-          <div className="space-y-3">
-            {filteredMatches.length === 0 ? (
-               <div className="flex flex-col items-center justify-center py-20 text-center">
-                 <MagnifyingGlassIcon className="h-10 w-10 text-muted-foreground/30 mb-4" />
-                 <p className="text-sm font-bold text-muted-foreground uppercase">Nenhum jogo encontrado</p>
-                 <p className="text-xs text-muted-foreground/60 mt-1">Tente ajustar seus filtros ou busca.</p>
-               </div>
-            ) : filteredMatches.map((match) => {
-              const following = isFollowingMatch(match.id)
-              const statusLabel = getStatusLabel(match.status, match.minute)
-              
-              return (
-                <div 
-                  key={match.id}
+          {/* Search & Filters */}
+          <div className="p-4 md:p-6 bg-background/50 border-b border-white/5 space-y-4 shrink-0">
+            <div className="relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-500" />
+              <Input 
+                placeholder="PROCURAR CLUBE..." 
+                className="pl-10 h-11 bg-white/5 border-white/5 focus-visible:ring-primary/40 font-black italic text-xs uppercase"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar -mx-4 px-4 sm:mx-0 sm:px-0">
+              {filterOptions.map((opt) => (
+                <Button
+                  key={opt.value}
+                  variant={statusFilter === opt.value ? "default" : "outline"}
+                  size="sm"
                   className={cn(
-                    "group relative overflow-hidden rounded-xl border border-border bg-card p-4 transition-all hover:border-primary/40 hover:bg-accent/5",
-                    following && "border-primary/30 bg-primary/[0.03]"
+                    "h-8 px-4 text-[10px] font-black uppercase tracking-widest rounded-xl transition-all grow sm:grow-0",
+                    statusFilter === opt.value 
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/20 italic" 
+                      : "bg-white/5 border-white/5 text-neutral-500 hover:text-white"
                   )}
+                  onClick={() => setStatusFilter(opt.value)}
                 >
-                  <div className="flex items-center justify-between gap-6">
-                    {/* Status & Time */}
-                    <div className="flex w-24 flex-col items-center justify-center gap-1 border-r border-border/50 pr-4">
-                      <Badge 
-                        variant={match.status === 'live' || match.status === 'halftime' ? 'default' : 'secondary'}
-                        className={cn(
-                           "text-[9px] uppercase font-black px-2 py-0.5",
-                           match.status === 'live' && "bg-destructive text-destructive-foreground animate-pulse"
-                        )}
-                      >
-                        {statusLabel}
-                      </Badge>
-                      {match.status === 'live' && (
-                        <span className="text-sm font-black text-foreground tabular-nums">{match.minute}'</span>
-                      )}
-                      {match.status === 'scheduled' && (
-                        <span className="text-[11px] font-black text-muted-foreground flex items-center gap-1">
-                          <ClockIcon className="h-3 w-3" />
-                          {match.startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      )}
-                    </div>
+                  {opt.label}
+                </Button>
+              ))}
+            </div>
+          </div>
 
-                    {/* Teams & Score */}
-                    <div className="flex flex-1 items-center justify-center gap-4">
-                       {/* Home Team */}
-                       <div className="flex flex-1 flex-col items-center gap-1.5 overflow-hidden">
-                         <img src={match.homeTeam.logo} alt="" className="h-10 w-10 object-contain drop-shadow-md" />
-                         <span className="text-[10px] font-black uppercase text-foreground/70 text-center truncate w-full">
-                           {match.homeTeam.name}
-                         </span>
-                       </div>
+          {/* List Area */}
+          <ScrollArea className="flex-1 bg-background px-4 md:px-6">
+            <div className="py-4 space-y-3">
+              {filteredMatches.length === 0 ? (
+                 <div className="flex flex-col items-center justify-center py-20 text-center opacity-40">
+                   <MagnifyingGlassIcon className="h-10 w-10 mb-4" />
+                   <p className="text-xs font-black uppercase italic tracking-widest">Nenhuma transmissão encontrada</p>
+                 </div>
+              ) : filteredMatches.map((match) => {
+                const following = isFollowingMatch(match.id)
+                const statusLabel = getStatusLabel(match.status, match.minute)
+                
+                return (
+                  <div 
+                    key={match.id}
+                    className={cn(
+                      "group relative rounded-2xl border transition-all duration-300",
+                      following 
+                        ? "border-primary/40 bg-primary/[0.03]" 
+                        : "border-white/5 bg-neutral-900/40 hover:border-white/10"
+                    )}
+                  >
+                    <div className="flex items-center p-3 md:p-4 gap-3 md:gap-6">
+                      {/* Left: Scoreboard (Condensed Mobile First) */}
+                      <div className="flex flex-col gap-2 flex-1">
+                        <div className="flex items-center gap-2">
+                           <Badge className="bg-primary/20 text-primary border-none font-black italic text-[8px] px-1.5 uppercase">
+                             {statusLabel}
+                           </Badge>
+                           {match.status === 'live' && (
+                             <span className="text-[10px] font-black text-white italic tracking-tighter tabular-nums animate-pulse">
+                               LIVE {match.minute}'
+                             </span>
+                           )}
+                        </div>
 
-                       {/* Score */}
-                       <div className="flex items-center gap-3 px-4 py-1.5 rounded-lg bg-background border border-border/50 shadow-inner">
-                         <span className={cn(
-                           "text-2xl font-black tabular-nums tracking-tighter",
-                           match.status === 'live' ? "text-foreground" : "text-muted-foreground/60"
-                         )}>
-                           {match.homeScore}
-                         </span>
-                         <span className="text-xl font-black text-muted-foreground/30 italic">-</span>
-                         <span className={cn(
-                           "text-2xl font-black tabular-nums tracking-tighter",
-                           match.status === 'live' ? "text-foreground" : "text-muted-foreground/60"
-                         )}>
-                           {match.awayScore}
-                         </span>
-                       </div>
+                        <div className="flex flex-col gap-1.5 font-black italic">
+                           <div className="flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-2 min-w-0">
+                                 <img src={match.homeTeam.logo} alt="" className="h-5 w-5 object-contain" />
+                                 <span className="text-[10px] md:text-xs uppercase truncate text-neutral-400">
+                                   {match.homeTeam.name}
+                                 </span>
+                              </div>
+                              <span className="text-sm md:text-base text-white tabular-nums">{match.homeScore}</span>
+                           </div>
+                           <div className="flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-2 min-w-0">
+                                 <img src={match.awayTeam.logo} alt="" className="h-5 w-5 object-contain" />
+                                 <span className="text-[10px] md:text-xs uppercase truncate text-neutral-400">
+                                   {match.awayTeam.name}
+                                 </span>
+                              </div>
+                              <span className="text-sm md:text-base text-white tabular-nums">{match.awayScore}</span>
+                           </div>
+                        </div>
+                      </div>
 
-                       {/* Away Team */}
-                       <div className="flex flex-1 flex-col items-center gap-1.5 overflow-hidden">
-                         <img src={match.awayTeam.logo} alt="" className="h-10 w-10 object-contain drop-shadow-md" />
-                         <span className="text-[10px] font-black uppercase text-foreground/70 text-center truncate w-full">
-                           {match.awayTeam.name}
-                         </span>
-                       </div>
-                    </div>
-
-                    {/* Follow Action */}
-                    <div className="pl-2">
-                      <Button
-                        size="sm"
-                        variant={following ? "secondary" : "default"}
-                        className={cn(
-                          "h-10 w-28 gap-2 font-black transition-all hover:scale-105 active:scale-95 group/btn",
-                          following ? "bg-secondary text-primary hover:bg-destructive/10 hover:text-destructive" : "bg-primary text-primary-foreground shadow-lg shadow-primary/20"
-                        )}
-                        onClick={() => following ? unfollowMatch(match.id) : followMatch(match.id)}
-                      >
-                        {following ? (
-                          <>
-                            <CheckIcon className="h-4 w-4 group-hover/btn:hidden" />
-                            <PlusIcon className="h-4 w-4 hidden group-hover/btn:block rotate-45" />
-                            <span className="group-hover/btn:hidden text-xs">Seguindo</span>
-                            <span className="hidden group-hover/btn:inline text-[9px] uppercase">Parar Siga</span>
-                          </>
-                        ) : (
-                          <>
-                            <PlusIcon className="h-4 w-4" />
-                            <span className="text-xs">Seguir</span>
-                          </>
-                        )}
-                      </Button>
+                      {/* Right: Action */}
+                      <div className="shrink-0">
+                        <Button
+                          size="sm"
+                          variant={following ? "secondary" : "default"}
+                          className={cn(
+                            "h-12 w-12 md:w-32 md:h-12 rounded-2xl transition-all shadow-lg active:scale-90",
+                            following 
+                              ? "bg-neutral-800 text-primary border border-white/5" 
+                              : "bg-primary text-primary-foreground shadow-primary/20"
+                          )}
+                          onClick={() => following ? unfollowMatch(match.id) : followMatch(match.id)}
+                        >
+                          {following ? (
+                            <div className="flex items-center justify-center">
+                              <CheckIcon className="h-5 w-5" />
+                              <span className="hidden md:inline ml-2 text-[10px] font-black uppercase italic">SEGUIDO</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center">
+                              <PlusIcon className="h-5 w-5" />
+                              <span className="hidden md:inline ml-2 text-[10px] font-black uppercase italic">SEGUIR</span>
+                            </div>
+                          )}
+                        </Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
+          </ScrollArea>
+
+          {/* Footer */}
+          <div className="p-4 md:p-6 bg-[#0c0c0c] border-t border-white/5 shrink-0 flex items-center justify-between gap-4">
+             <div className="flex items-center gap-2 text-neutral-600">
+                <ExclamationCircleIcon className="h-4 w-4" />
+                <span className="text-[8px] md:text-[9px] font-black uppercase tracking-widest italic">
+                   SISTEMA DE RADAR IA ATIVO
+                </span>
+             </div>
+             <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-10 md:h-11 px-6 font-black uppercase italic text-xs border-white/10 hover:bg-white/5 text-neutral-400 rounded-xl"
+                onClick={() => setOpen(false)}
+              >
+                FECHAR
+             </Button>
           </div>
-        </ScrollArea>
-        
-        <div className="p-4 bg-muted/20 border-t flex items-center justify-between">
-           <span className="text-[10px] text-muted-foreground font-black uppercase flex items-center gap-1.5">
-             <ExclamationCircleIcon className="h-3.5 w-3.5" />
-             Selecione os jogos para obter insights
-           </span>
-           <Button variant="outline" size="sm" className="font-bold border-border/50" onClick={() => setOpen(false)}>
-             Fechar
-           </Button>
         </div>
       </DialogContent>
     </Dialog>

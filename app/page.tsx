@@ -6,7 +6,8 @@ import {
   FunnelIcon, 
   CheckIcon, 
   XMarkIcon, 
-  MagnifyingGlassIcon 
+  MagnifyingGlassIcon,
+  BoltIcon
 } from '@heroicons/react/24/outline'
 import { useState, useMemo } from 'react'
 import { Button } from '@/components/ui/button'
@@ -24,12 +25,14 @@ import {
   DropdownMenuCheckboxItem
 } from '@/components/ui/dropdown-menu'
 import { useUser } from '@/lib/user-context'
+import { useQte } from '@/lib/qte-context'
 import { mockMatches } from '@/lib/mock-data'
 
 type MatchStatus = 'all' | 'live' | 'halftime' | 'scheduled' | 'finished'
 
 export default function HomePage() {
   const { user } = useUser()
+  const { triggerQte } = useQte()
   const [statusFilter, setStatusFilter] = useState<MatchStatus>('all')
   const [search, setSearch] = useState('')
 
@@ -68,70 +71,80 @@ export default function HomePage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-8">
+    <div className="mx-auto max-w-7xl px-4 py-6 md:py-8 transition-all">
       {/* Header Section */}
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-            <TrophyIcon className="h-6 w-6 text-primary" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">
-              Jogos Seguindo
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Acompanhe seus jogos em tempo real com insights inteligentes
-            </p>
-          </div>
+      <div className="mb-6 md:mb-8 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-2">
+          <h1 className="text-2xl md:text-3xl font-black text-foreground tracking-tight italic uppercase">
+            Jogos <span className="text-primary italic">Seguidos</span>
+          </h1>
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          {liveCount > 0 && (
-            <Badge className="bg-primary/10 text-primary border border-primary/20 h-9">
-              <span className="relative mr-2 flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-              </span>
-              {liveCount} ao vivo
-            </Badge>
-          )}
-          
-          <div className="relative w-full sm:w-64">
-            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input 
-              placeholder="Buscar jogo..." 
-              className="pl-10 h-9 bg-card border-border/50 focus-visible:ring-primary/20"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+        <div className="flex flex-col gap-4 md:flex-row md:items-center">
+          <div className="flex flex-wrap items-center gap-2">
+            {liveCount > 0 && (
+              <Badge className="bg-primary/10 text-primary border border-primary/20 h-10 px-3 flex-shrink-0">
+                <span className="relative mr-2 flex h-2 w-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+                </span>
+                <span className="font-black italic text-[11px] uppercase">{liveCount} AGORA</span>
+              </Badge>
+            )}
+            
+            <div className="relative flex-1 md:w-64 min-w-[200px]">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input 
+                placeholder="Buscar partida..." 
+                className="pl-10 h-10 md:h-9 bg-card border-border/50 focus-visible:ring-primary/20 font-bold text-xs"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 lg:flex lg:items-center gap-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 h-9">
+                <Button variant="outline" size="sm" className="gap-2 h-10 md:h-9 font-bold text-xs uppercase tracking-widest">
                   <FunnelIcon className="h-4 w-4" />
                   {statusFilter === 'all' ? 'Filtrar' : filterLabels[statusFilter]}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuLabel>Status da Partida</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-48 bg-card border-border shadow-xl">
+                <DropdownMenuLabel className="font-black uppercase tracking-widest text-[10px] text-muted-foreground">Status da Partida</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {(Object.keys(filterLabels) as MatchStatus[]).map((status) => (
                   <DropdownMenuCheckboxItem
                     key={status}
                     checked={statusFilter === status}
                     onCheckedChange={() => setStatusFilter(status)}
+                    className="font-bold text-xs"
                   >
                     {filterLabels[status]}
                   </DropdownMenuCheckboxItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            <Button 
+              size="sm" 
+              variant="outline"
+              className="gap-2 h-10 md:h-9 border-primary/50 text-primary hover:bg-primary/10 font-bold text-xs uppercase tracking-widest transition-all active:scale-95"
+              onClick={() => {
+                const types: ('goal' | 'card' | 'corner' | 'foul')[] = ['goal', 'card', 'corner', 'foul']
+                const randomType = types[Math.floor(Math.random() * types.length)]
+                triggerQte(randomType)
+              }}
+            >
+              <BoltIcon className="h-4 w-4 fill-current" />
+              Simular
+            </Button>
+
             <FollowMatchDialog>
-              <Button size="sm" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90 h-9">
+              <Button size="sm" className="col-span-2 lg:col-auto lg:w-auto gap-2 bg-primary text-primary-foreground hover:bg-primary/90 h-10 md:h-9 font-black uppercase tracking-tighter italic shadow-[0_4px_15px_rgba(var(--primary),0.2)]">
                 <PlusIcon className="h-4 w-4" />
-                Seguir Jogo
+                Seguir Novo Jogo
               </Button>
             </FollowMatchDialog>
           </div>

@@ -3,10 +3,7 @@
 import { useEffect, useRef } from 'react'
 import { 
   XMarkIcon, 
-  CheckIcon, 
-  ExclamationTriangleIcon, 
-  InformationCircleIcon, 
-  BoltIcon, 
+  InformationCircleIcon,
   ArrowTrendingUpIcon 
 } from '@heroicons/react/24/solid'
 import { Button } from '@/components/ui/button'
@@ -17,19 +14,7 @@ import type { InsightType } from '@/lib/types'
 
 interface NotificationPanelProps {
   onClose: () => void
-}
-
-function getNotificationIcon(type: InsightType) {
-  switch (type) {
-    case 'opportunity':
-      return ArrowTrendingUpIcon
-    case 'warning':
-      return ExclamationTriangleIcon
-    case 'momentum':
-      return BoltIcon
-    default:
-      return InformationCircleIcon
-  }
+  isDesktop?: boolean
 }
 
 function getNotificationColor(type: InsightType) {
@@ -55,51 +40,58 @@ function formatTime(date: Date) {
   return date.toLocaleDateString('pt-BR')
 }
 
-export function NotificationPanel({ onClose }: NotificationPanelProps) {
+export function NotificationPanel({ onClose, isDesktop }: NotificationPanelProps) {
   const { notifications, markAsRead, markAllAsRead, unreadCount } = useNotifications()
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (panelRef.current && !panelRef.current.contains(event.target as Node)) {
+      if (isDesktop && panelRef.current && !panelRef.current.contains(event.target as Node)) {
         onClose()
       }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [onClose])
+  }, [onClose, isDesktop])
 
   return (
     <div
       ref={panelRef}
-      className="absolute right-0 top-full mt-2 w-96 rounded-lg border border-border bg-card shadow-xl"
+      className={cn(
+        "z-[100] bg-[#0c0c0c]/95 backdrop-blur-xl shadow-2xl transition-all duration-300 ease-out flex flex-col overflow-hidden",
+        isDesktop 
+          ? "relative w-full h-[450px] rounded-2xl border border-white/10" 
+          : "fixed inset-y-0 right-0 w-[85%] max-w-[380px] border-l border-white/10 h-full animate-in slide-in-from-right"
+      )}
     >
-      <div className="flex items-center justify-between border-b border-border p-4">
-        <div className="flex items-center gap-2">
-          <h3 className="font-semibold text-foreground">Notificações</h3>
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-white/5 p-4 shrink-0">
+        <div className="flex flex-col">
+          <h3 className="text-sm font-black italic uppercase tracking-tight text-foreground">
+            Feed de <span className="text-primary italic">IA</span>
+          </h3>
           {unreadCount > 0 && (
-            <span className="rounded-full bg-primary px-2 py-0.5 text-xs font-medium text-primary-foreground">
+            <p className="text-[10px] font-black text-primary uppercase tracking-widest animate-pulse">
               {unreadCount} novas
-            </span>
+            </p>
           )}
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           {unreadCount > 0 && (
             <Button
               variant="ghost"
               size="sm"
-              className="text-xs text-muted-foreground hover:text-foreground"
+              className="h-7 text-[9px] font-black uppercase tracking-widest text-muted-foreground hover:text-primary px-2"
               onClick={markAllAsRead}
             >
-              <CheckIcon className="mr-1 h-3 w-3" />
-              Marcar todas
+              LIMPAR
             </Button>
           )}
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-muted-foreground hover:text-foreground"
+            className="h-8 w-8 rounded-full border border-white/5 bg-white/5 text-neutral-400 hover:text-white"
             onClick={onClose}
           >
             <XMarkIcon className="h-4 w-4" />
@@ -107,69 +99,59 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
         </div>
       </div>
 
-      <ScrollArea className="h-[400px]">
+      <ScrollArea className="flex-1 min-h-0 w-full overflow-hidden">
         {notifications.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-            <InformationCircleIcon className="mb-2 h-10 w-10 opacity-30" />
-            <p>Nenhuma notificação</p>
+          <div className="flex flex-col items-center justify-center py-20 text-center px-6">
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-secondary/30 border border-white/5">
+              <InformationCircleIcon className="h-8 w-8 text-neutral-600 opacity-30" />
+            </div>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-neutral-500">
+              SEM NOVIDADES
+            </p>
           </div>
         ) : (
-          <div className="divide-y divide-border">
+          <div className="divide-y divide-white/5 pb-10">
             {notifications.map(notification => {
-              const Icon = getNotificationIcon(notification.type)
               const colorClasses = getNotificationColor(notification.type)
 
               return (
                 <button
                   key={notification.id}
                   className={cn(
-                    'w-full p-4 text-left transition-colors hover:bg-secondary/50',
-                    !notification.read && 'bg-secondary/30'
+                    'w-full p-4 text-left transition-all duration-300 relative group border-l-[3px] border-transparent',
+                    !notification.read ? 'bg-primary/5 border-l-primary' : 'hover:bg-white/5'
                   )}
                   onClick={() => markAsRead(notification.id)}
                 >
-                  <div className="flex gap-3">
-                    <div
-                      className={cn(
-                        'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border',
-                        colorClasses
-                      )}
-                    >
-                      <Icon className="h-5 w-5" />
-                    </div>
-                    <div className="flex-1 space-y-1">
+                  <div className="flex gap-4">
+                    <div className="flex-1 space-y-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
                         <p
                           className={cn(
-                            'text-sm font-medium',
-                            notification.read ? 'text-foreground' : 'text-primary'
+                            'text-[12px] font-black uppercase italic tracking-tight leading-tight',
+                            notification.read ? 'text-neutral-400' : 'text-primary'
                           )}
                         >
                           {notification.title}
                         </p>
-                        {!notification.read && (
-                          <span className="h-2 w-2 shrink-0 rounded-full bg-primary" />
-                        )}
                       </div>
-                      <p className="text-sm text-muted-foreground line-clamp-2">
+                      
+                      <p className="text-[10px] font-bold text-neutral-500 line-clamp-2 leading-snug">
                         {notification.message}
                       </p>
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                        <span>{formatTime(notification.timestamp)}</span>
+                      
+                      <div className="flex items-center gap-3 pt-1">
+                        <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-neutral-600">
+                          {formatTime(notification.timestamp)}
+                        </div>
+                        
                         {notification.confidence && (
-                          <>
-                            <span>•</span>
-                            <span className="text-primary">
-                              {notification.confidence}% probabilidade
-                            </span>
-                          </>
+                          <div className="flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest text-primary italic">
+                            <ArrowTrendingUpIcon className="h-2.5 w-2.5" />
+                            {notification.confidence}% IA
+                          </div>
                         )}
                       </div>
-                      {notification.suggestedAction && (
-                        <div className="mt-2 rounded bg-primary/10 px-2 py-1 text-xs font-medium text-primary">
-                          {notification.suggestedAction}
-                        </div>
-                      )}
                     </div>
                   </div>
                 </button>
@@ -178,6 +160,18 @@ export function NotificationPanel({ onClose }: NotificationPanelProps) {
           </div>
         )}
       </ScrollArea>
+      
+      {/* Footer (Mobile Only) */}
+      {!isDesktop && (
+        <div className="border-t border-white/5 p-6 bg-black/20">
+           <Button 
+              className="w-full h-11 bg-primary text-primary-foreground font-black uppercase tracking-widest italic rounded-xl shadow-[0_0_15px_rgba(var(--primary),0.2)]" 
+              onClick={onClose}
+            >
+             FECHAR PAINEL
+           </Button>
+        </div>
+      )}
     </div>
   )
 }

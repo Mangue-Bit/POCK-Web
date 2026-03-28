@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { BellIcon, UserIcon, TrophyIcon, ArrowTrendingUpIcon } from '@heroicons/react/24/outline'
 import { Button } from '@/components/ui/button'
@@ -8,6 +9,14 @@ import { cn } from '@/lib/utils'
 import { useNotifications } from '@/lib/notification-context'
 import { NotificationPanel } from './notification-panel'
 import { useState } from 'react'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogDescription,
+} from '@/components/ui/dialog'
 
 const navItems = [
   { href: '/', label: 'Jogos', icon: TrophyIcon },
@@ -17,19 +26,15 @@ const navItems = [
 export function Header() {
   const pathname = usePathname()
   const { unreadCount } = useNotifications()
-  const [showNotifications, setShowNotifications] = useState(false)
+  const [showDesktopNotifications, setShowDesktopNotifications] = useState(false)
+  const [showMobileNotifications, setShowMobileNotifications] = useState(false)
 
   return (
     <header className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            <ArrowTrendingUpIcon className="h-7 w-7 text-primary" />
-            <span className="text-xl font-bold text-foreground">
-              POC <span className="text-primary">Insights</span>
-            </span>
-          </div>
+          <Image src="/esportes-da-sorte-white-logo-4.svg" alt="Logo" width={123} height={123} />
         </Link>
 
         {/* Navigation */}
@@ -58,13 +63,13 @@ export function Header() {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          {/* Notification Button */}
-          <div className="relative">
+          {/* Notification Button (Desktop Dropdown) */}
+          <div className="relative hidden md:block">
             <Button
               variant="ghost"
               size="icon"
               className="relative text-muted-foreground hover:text-foreground hover:bg-secondary"
-              onClick={() => setShowNotifications(!showNotifications)}
+              onClick={() => setShowDesktopNotifications(!showDesktopNotifications)}
             >
               <BellIcon className="h-5 w-5" />
               {unreadCount > 0 && (
@@ -73,9 +78,42 @@ export function Header() {
                 </span>
               )}
             </Button>
-            {showNotifications && (
-              <NotificationPanel onClose={() => setShowNotifications(false)} />
+            {showDesktopNotifications && (
+              <div className="absolute right-0 top-full mt-2 w-96 z-[100] shadow-2xl">
+                 <NotificationPanel onClose={() => setShowDesktopNotifications(false)} isDesktop />
+              </div>
             )}
+          </div>
+
+          {/* Notification Button (Mobile Sidebar) */}
+          <div className="md:hidden">
+            <Dialog open={showMobileNotifications} onOpenChange={setShowMobileNotifications}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="relative text-muted-foreground hover:text-foreground hover:bg-secondary"
+                >
+                  <BellIcon className="h-5 w-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </Button>
+              </DialogTrigger>
+              
+              <DialogContent 
+                className="p-0 border-none bg-transparent shadow-none w-full max-w-none h-full"
+                showCloseButton={false}
+              >
+                <DialogHeader className="sr-only">
+                  <DialogTitle>Notificações</DialogTitle>
+                  <DialogDescription>Feed de IA em tempo real</DialogDescription>
+                </DialogHeader>
+                <NotificationPanel onClose={() => setShowMobileNotifications(false)} />
+              </DialogContent>
+            </Dialog>
           </div>
 
           {/* Mobile Nav */}

@@ -2,19 +2,18 @@
 
 import { useEffect, useState } from 'react'
 import { 
-  BoltIcon, 
   XMarkIcon, 
-  ArrowTrendingUpIcon, 
-  ExclamationCircleIcon, 
-  FlagIcon, 
-  NoSymbolIcon, 
-  FireIcon 
+  FireIcon,
+  ArrowTrendingUpIcon,
+  ChartBarIcon,
+  BoltIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/solid'
 import { Button } from '@/components/ui/button'
+import { TeamBadge } from '@/components/team-badge'
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog"
@@ -25,20 +24,37 @@ import { mockMatches } from '@/lib/mock-data'
 export function BettingQte() {
   const { activeQte, dismissQte } = useQte()
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
+  const [isMinified, setIsMinified] = useState(false)
+  const [activeQteRefId, setActiveQteRefId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (activeQte) {
+    if (!activeQte) return
+
+    // Re-initialize for new events
+    if (timeLeft === null || activeQte.id !== activeQteRefId) {
+      setIsMinified(false)
       setTimeLeft(activeQte.duration)
-      
-      const timer = setInterval(() => {
-        setTimeLeft((prev) => (prev !== null ? Math.max(0, prev - 0.1) : null))
-      }, 100)
-
-      return () => clearInterval(timer)
+      setActiveQteRefId(activeQte.id)
     }
-  }, [activeQte])
 
-  // Handle auto-dismiss when time reaches zero
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev === null) return null
+        const next = Math.max(0, prev - 0.1)
+        
+        // Transition to minified after 10s of the event duration has passed
+        if (activeQte.duration - next >= 10 && !isMinified) {
+          setIsMinified(true)
+        }
+        return next
+      })
+    }, 100)
+
+    return () => clearInterval(timer)
+  }, [activeQte, isMinified])
+
+
+
   useEffect(() => {
     if (activeQte && timeLeft !== null && timeLeft <= 0) {
       handleDismiss()
@@ -52,208 +68,237 @@ export function BettingQte() {
   if (!activeQte || timeLeft === null) return null
 
   const progress = (timeLeft / activeQte.duration) * 100
-  
-  const getQteStyles = (type: string) => {
-    switch (type) {
-      case 'goal':
-        return { 
-          color: 'bg-primary', 
-          foreground: 'text-primary-foreground', 
-          bg: 'bg-primary/5', 
-          icon: BoltIcon 
-        }
-      case 'card':
-        return { 
-          color: 'bg-orange-500', 
-          foreground: 'text-white', 
-          bg: 'bg-orange-500/10', 
-          icon: ExclamationCircleIcon 
-        }
-      case 'corner':
-        return { 
-          color: 'bg-blue-500', 
-          foreground: 'text-white', 
-          bg: 'bg-blue-500/10', 
-          icon: FlagIcon 
-        }
-      case 'foul':
-        return { 
-          color: 'bg-destructive', 
-          foreground: 'text-destructive-foreground', 
-          bg: 'bg-destructive/10', 
-          icon: NoSymbolIcon 
-        }
-      default:
-        return { 
-          color: 'bg-primary', 
-          foreground: 'text-primary-foreground', 
-          bg: 'bg-primary/5', 
-          icon: BoltIcon 
-        }
-    }
-  }
-
-  const styles = getQteStyles(activeQte.type)
-  const Icon = styles.icon
-  
   const match = mockMatches.find(m => m.id === activeQte.matchId)
 
+
   return (
-    <Dialog open={!!activeQte} onOpenChange={(open) => {
-      if (!open && activeQte) {
-        handleDismiss()
-      }
-    }}>
-      <DialogContent 
-        className="p-0 overflow-hidden border-none sm:max-w-[750px] shadow-[0_0_50px_rgba(0,0,0,0.5)]"
-        showCloseButton={false}
-      >
-        <div className={cn(
-          "w-full transition-all duration-300 bg-card",
-          !activeQte && "pointer-events-none"
-        )}>
-          {/* Header with Background Glow */}
-          <div className={cn(
-            "relative p-6 pb-4 border-b border-border/50",
-            styles.bg
-          )}>
-            <div className="flex items-center">
-              <div className="flex items-center justify-start w-full gap-8 py-2">
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "flex h-12 w-12 items-center justify-center rounded-full animate-pulse shadow-lg",
-                    styles.color,
-                    styles.foreground
-                  )}>
-                    <Icon className="h-6 w-6 fill-current" />
-                  </div>
-                  <DialogHeader className="flex flex-col items-start gap-0">
-                    <DialogTitle className="text-4xl font-black uppercase tracking-tighter text-foreground leading-none">
-                      {activeQte.title}
-                    </DialogTitle>
-                  </DialogHeader>
-                </div>
-
-                <div className="h-10 w-px bg-border/50 hidden sm:block" />
-
-                {match && (
-                  <div className="flex items-center gap-4">
-                    <img src={match.homeTeam.logo} alt="" className="h-12 w-12 object-contain drop-shadow-md" />
-                    <span className="text-lg font-black text-primary/30 italic">VS</span>
-                    <img src={match.awayTeam.logo} alt="" className="h-12 w-12 object-contain drop-shadow-md" />
-                  </div>
-                )}
-              </div>
-              <button 
-                onClick={handleDismiss}
-                className="absolute top-4 right-4 rounded-full p-1 text-muted-foreground hover:bg-secondary hover:text-foreground"
-              >
-                <XMarkIcon className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-
-          <div className="space-y-6 p-6 pt-4">
-            <DialogDescription className="text-lg text-foreground/90 leading-snug font-bold border-none">
-              {activeQte.message}
-            </DialogDescription>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <ArrowTrendingUpIcon className="h-4 w-4 text-primary" />
-                  <span className="text-xs font-black uppercase tracking-widest text-primary">
-                    Nível de Confiança
-                  </span>
-                </div>
-                <span className="text-sm font-black text-primary">
-                  {activeQte.confidence}%
-                </span>
-              </div>
-              <div className="h-3 w-full overflow-hidden rounded-full bg-secondary">
-                <div 
-                  className="h-full bg-primary transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(var(--primary),0.5)]"
-                  style={{ width: `${activeQte.confidence}%` }}
-                />
-              </div>
-            </div>
-
-            <div className="grid gap-3">
-              {activeQte.actions.map((action, idx) => (
-                <Button
-                  key={idx}
-                  size="lg"
-                  className={cn(
-                    "group relative h-16 w-full overflow-hidden text-lg font-black transition-all hover:scale-[1.02] active:scale-[0.98] shadow-xl",
-                    styles.color,
-                    styles.foreground
-                  )}
-                  onClick={() => {
-                    console.log('Bet placed:', action.action)
-                    handleDismiss()
-                  }}
-                >
-                  <span className="relative z-10 flex items-center justify-between w-full px-4">
-                    <span>{action.label}</span>
-                    <span className="rounded-lg bg-black/30 px-3 py-1 text-sm font-black backdrop-blur-sm">
-                      @{action.odds?.toFixed(2)}
-                    </span>
-                  </span>
-                  <div className="absolute inset-0 translate-x-[-100%] bg-white/20 transition-transform group-hover:translate-x-0 duration-500" />
-                </Button>
-              ))}
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between gap-4">
-                <div className="flex items-center gap-1 text-[10px] font-black uppercase text-secondary-foreground/60 tracking-widest">
-                  <FireIcon className="h-3 w-3 text-orange-500 animate-pulse" />
-                  Tempo Restante
-                </div>
-                <span className="text-xs font-black tabular-nums text-foreground">{timeLeft.toFixed(1)}s</span>
-              </div>
-              <div className="relative h-2.5 w-full overflow-visible rounded-full bg-secondary/30">
-                <div 
-                  className="h-full rounded-full transition-all duration-100 ease-linear shadow-[0_0_15px_rgba(249,115,22,0.5)]"
-                  style={{ 
-                    width: `${progress}%`,
-                    background: 'linear-gradient(90deg, #F97316 0%, #EA580C 50%, #DC2626 100%)',
-                    boxShadow: 'inset 0 0 10px rgba(0,0,0,0.2)'
-                  }}
-                />
-                {/* Burning Spark/Flame at the edge */}
-                <div 
-                  className="absolute top-1/2 -translate-y-1/2 flex items-center justify-center transition-all duration-100 ease-linear"
-                  style={{ 
-                    left: `${progress}%`,
-                    transform: 'translate(-50%, -50%)',
-                    filter: 'drop-shadow(0 0 10px #F97316)'
-                  }}
-                >
-                  <div className="relative">
-                    <div className="absolute inset-0 bg-orange-500 rounded-full blur-[8px] animate-ping opacity-50" />
-                    <FireIcon className="h-6 w-6 text-orange-400 fill-orange-500 animate-bounce transition-transform duration-75" />
-                    <div className="absolute top-0 -left-1 h-1.5 w-1.5 bg-yellow-300 rounded-full blur-[1px] animate-pulse" />
-                  </div>
-                </div>
-                {/* Smoke/Burn trail */}
-                <div 
-                  className="absolute top-0 bottom-0 left-0 bg-black/10 blur-[2px] transition-all duration-100 ease-linear"
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-            </div>
+    <>
+      {/* MINIFIED NOTIFICATION (Phase 2: After 10s) */}
+      {isMinified && activeQte && (
+        <div className="fixed top-4 bottom-auto inset-x-4 md:top-auto md:bottom-6 md:left-6 md:right-auto z-[100] animate-in slide-in-from-top-full md:slide-in-from-left-full duration-700 ease-out">
+          <div className="group relative flex h-24 md:h-28 w-full md:w-[480px] overflow-hidden rounded-2xl md:rounded-3xl border-2 border-primary/20 bg-[#0a0a0a]/95 backdrop-blur-xl shadow-[0_0_50px_rgba(var(--primary),0.15)] ring-1 ring-white/5">
+            {/* Pulsing Glow Effect */}
+            <div className="absolute -left-10 top-0 h-full w-20 bg-primary/20 blur-[40px] animate-pulse" />
             
-            {/* Profile specific badge */}
-            <div className="rounded-lg bg-secondary/50 px-4 py-2 border border-border/50">
-              <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground uppercase">
-                <ExclamationCircleIcon className="h-4 w-4 text-warning" />
-                Sugestão baseada no seu perfil
+            {/* Burning Fuse Progress Bar at the bottom */}
+            <div 
+              className="absolute bottom-0 left-0 h-1 md:h-1.5 bg-gradient-to-r from-emerald-600 to-primary transition-all duration-100 ease-linear shadow-[0_0_15px_theme(colors.primary)]"
+              style={{ width: `${progress}%` }}
+            />
+
+            <div className="flex w-full items-center p-3 md:p-5 pl-2 md:pl-4 pr-2 md:pr-3 gap-3 md:gap-5">
+              {/* Left Side: Confidence */}
+              <div className="flex flex-col items-center justify-center gap-0.5 md:gap-1 min-w-[60px] md:min-w-[70px]">
+                <div className="flex flex-col items-center">
+                  <span className="text-lg md:text-xl font-black italic tracking-tighter text-primary leading-none">{activeQte.confidence}%</span>
+                  <span className="text-[7px] md:text-[8px] font-black uppercase tracking-widest text-neutral-500 leading-none">Confiança</span>
+                </div>
+              </div>
+
+              {/* Middle: Match & Content */}
+              <div className="flex flex-1 flex-col justify-center min-w-0">
+                <div className="flex items-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
+                  <div className="flex items-center gap-1 rounded bg-primary/10 px-1 py-0.5 border border-primary/20">
+                     <span className="text-[7px] md:text-[9px] font-black text-primary uppercase tracking-tighter">LIVE</span>
+                  </div>
+                  <span className="text-[8px] md:text-[10px] font-black uppercase text-neutral-500 italic tracking-widest truncate">Minuto {match?.minute}' · <span className="hidden sm:inline">Brasileirão</span></span>
+                </div>
+                
+                <h3 className="text-sm md:text-base font-black italic uppercase tracking-tight text-white line-clamp-1">
+                  {activeQte.actions[0]?.label || 'OPORTUNIDADE'}
+                </h3>
+                
+                <div className="flex items-center gap-2 mt-1 px-1 py-0.5 rounded-lg bg-white/5 border border-white/5 w-fit">
+                  <TeamBadge team={match!.homeTeam} size="sm" />
+                  <span className="text-[10px] font-black text-neutral-600 italic">X</span>
+                  <TeamBadge team={match!.awayTeam} size="sm" />
+                </div>
+              </div>
+
+              {/* Right Side: Action + Dismiss */}
+              <div className="flex flex-col items-end gap-2 md:gap-3 justify-center min-w-[100px] md:min-w-[120px]">
+                <div className="text-[8px] md:text-[10px] font-black text-primary italic uppercase tracking-widest animate-pulse whitespace-nowrap">
+                  {Math.ceil(timeLeft)}s RESTANTES
+                </div>
+                
+                <div className="flex items-center gap-1.5 md:gap-2">
+                  <Button 
+                    size="sm" 
+                    className="h-9 md:h-11 gap-1.5 md:gap-2 bg-gradient-to-r from-emerald-600 to-primary px-3 md:px-5 font-black text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.3)] hover:opacity-90 active:scale-95 border-none text-[10px] md:text-sm"
+                    onClick={() => {
+                      console.log('Instant Bet notification...')
+                      handleDismiss()
+                    }}
+                  >
+                    APOSTAR <ChevronRightIcon className="h-3 w-3 md:h-4 md:w-4" />
+                  </Button>
+
+                  <button 
+                    onClick={handleDismiss}
+                    className="rounded-full p-1.5 md:p-2 text-neutral-500 hover:bg-white/10 hover:text-white transition-all"
+                  >
+                    <XMarkIcon className="h-4 w-4 md:h-5 md:w-5" />
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      )}
+
+      {/* DIALOG VIEW (Full Alert) */}
+      <Dialog open={!!activeQte && !isMinified} onOpenChange={(open) => {
+        if (!open && activeQte && !isMinified) handleDismiss()
+      }}>
+        <DialogContent 
+          className="p-0 overflow-hidden border-2 border-primary/20 w-[95%] sm:max-w-[480px] bg-[#0c0c0c] text-white rounded-2xl md:rounded-3xl"
+          showCloseButton={false}
+        >
+          {/* Top Glow Border */}
+          <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-600 via-primary to-emerald-400 opacity-80" />
+          
+          <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+            {/* Header */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <DialogTitle className="text-lg md:text-xl font-black uppercase tracking-tight italic">QUICK-TIME EVENT</DialogTitle>
+                <div className="hidden min-[400px]:flex ml-1 md:ml-2 items-center gap-1.5 rounded-full bg-primary/10 border border-primary/30 px-2 py-0.5">
+                  <div className="h-1 w-1 md:h-1.5 md:w-1.5 rounded-full bg-primary shadow-[0_0_5px_theme(colors.primary)]" />
+                  <span className="text-[8px] md:text-[10px] font-black text-primary uppercase tracking-wider">LIVE</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 md:gap-3">
+                <span className="text-[10px] md:text-sm font-black text-primary tabular-nums uppercase">
+                  {Math.ceil(timeLeft - 20)}s restam
+                </span>
+                <button 
+                  onClick={handleDismiss}
+                  className="text-muted-foreground hover:text-white transition-colors"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              </div>
+            </div>
+
+            <DialogDescription className="sr-only">
+               Evento em tempo real detectado para {match?.homeTeam.name} vs {match?.awayTeam.name}
+            </DialogDescription>
+
+            {/* Match Info */}
+            {match && (
+              <div className="flex items-center justify-center gap-4 md:gap-8 py-2">
+                <div className="flex flex-col items-center gap-1 min-w-[80px]">
+                   <TeamBadge team={match.homeTeam} size="md" />
+                   <span className="text-[10px] font-black uppercase text-neutral-400 truncate max-w-[80px]">{match.homeTeam.shortName}</span>
+                </div>
+
+                <div className="flex flex-col items-center gap-1">
+                  <div className="flex items-center gap-3 rounded-xl bg-neutral-800/80 px-4 py-2 text-2xl font-black italic shadow-inner">
+                    <span className="text-white">{match.homeScore}</span>
+                    <span className="text-neutral-600">—</span>
+                    <span className="text-white">{match.awayScore}</span>
+                  </div>
+                  <span className="text-[9px] font-black uppercase tracking-[0.2em] text-primary">{match.minute}'</span>
+                </div>
+
+                <div className="flex flex-col items-center gap-1 min-w-[80px]">
+                   <TeamBadge team={match.awayTeam} size="md" />
+                   <span className="text-[10px] font-black uppercase text-neutral-400 truncate max-w-[80px]">{match.awayTeam.shortName}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Burning Bar */}
+            <div className="space-y-2 md:space-y-3">
+              <div className="relative h-2 md:h-2.5 w-full rounded-full bg-neutral-900 overflow-hidden">
+                <div 
+                  className="absolute inset-y-0 left-0 rounded-full transition-all duration-100 ease-linear shadow-[0_0_15px_rgba(16,185,129,0.3)]"
+                  style={{ 
+                    width: `${((timeLeft - 20) / 10) * 100}%`,
+                    background: 'linear-gradient(90deg, #059669 0%, #10b981 70%, #34d399 100%)',
+                  }}
+                />
+              </div>
+            </div>
+
+            {/* Main Card */}
+            <div className="rounded-xl md:rounded-2xl bg-[#141414] p-4 md:p-6 border border-white/5 space-y-4 md:space-y-6">
+              <h3 className="text-base md:text-lg font-black leading-snug text-white">
+                Alta probabilidade de {activeQte.type === 'goal' ? 'gol' : activeQte.type} nos próximos minutos
+              </h3>
+
+              <div className="flex flex-col min-[450px]:flex-row items-center gap-4 md:gap-8 text-center min-[450px]:text-left">
+                <div className="space-y-0 md:space-y-1">
+                  <div className="text-5xl md:text-6xl font-black italic tracking-tighter bg-gradient-to-br from-primary to-emerald-400 bg-clip-text text-transparent leading-none">
+                    {activeQte.confidence}%
+                  </div>
+                  <div className="text-[8px] md:text-[10px] font-black uppercase text-neutral-500 tracking-[0.2em]">PROBABILIDADE</div>
+                </div>
+
+                <div className="flex-1 w-full space-y-1.5 md:space-y-2">
+                  <div className="flex items-center justify-between text-[10px] md:text-xs font-bold">
+                    <span className="text-neutral-500 uppercase tracking-wider">MERCADO</span>
+                    <span className="text-neutral-200">{activeQte.actions[0]?.label}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] md:text-xs font-bold">
+                    <span className="text-neutral-500 uppercase tracking-wider">ODD ATUAL</span>
+                    <span className="text-primary">{activeQte.actions[0]?.odds?.toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[10px] md:text-xs font-bold">
+                    <span className="text-neutral-500 uppercase tracking-wider">MINUTO</span>
+                    <span className="text-neutral-200">{match?.minute || '58'}'</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Why Generated */}
+            <div className="space-y-3 md:space-y-4">
+              <h4 className="text-[9px] md:text-[10px] font-black uppercase text-neutral-500 tracking-[0.2em]">POR QUE ESTE ALERTA FOI GERADO</h4>
+              <div className="space-y-3 md:space-y-4">
+                {activeQte.reasons?.map((reason, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <div className="flex h-7 w-7 md:h-8 md:w-8 shrink-0 items-center justify-center rounded-full border border-primary/30 bg-primary/5">
+                      {i === 0 && <ArrowTrendingUpIcon className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />}
+                      {i === 1 && <ChartBarIcon className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary" />}
+                      {i === 2 && <BoltIcon className="h-3.5 w-3.5 md:h-4 md:w-4 text-primary fill-current" />}
+                    </div>
+                    <p className="text-[10px] md:text-[11px] font-bold text-neutral-300 leading-tight">
+                      {reason}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Final Buttons */}
+            <div className="space-y-2 md:space-y-3 pt-2 md:pt-4">
+              <Button 
+                size="lg" 
+                className="group relative h-14 md:h-16 w-full overflow-hidden bg-gradient-to-r from-emerald-600 to-primary text-base md:text-lg font-black text-primary-foreground hover:opacity-90 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all active:scale-95 border-none"
+                onClick={() => {
+                  console.log('Betting sequence...')
+                  handleDismiss()
+                }}
+              >
+                <span className="relative z-10 flex items-center justify-center gap-2 tracking-widest uppercase italic">
+                  APOSTAR AGORA <ChevronRightIcon className="h-4 w-4 md:h-5 md:w-5 transition-transform group-hover:translate-x-1" />
+                </span>
+                <div className="absolute inset-x-0 bottom-0 h-1/2 bg-white/5 blur-xl pointer-events-none" />
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                className="h-10 md:h-12 w-full text-neutral-500 hover:text-primary hover:bg-primary/5 font-bold uppercase tracking-[0.3em] text-[9px] md:text-[10px]"
+                onClick={handleDismiss}
+              >
+                DISPENSAR
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   )
+
 }

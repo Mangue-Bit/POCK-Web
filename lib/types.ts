@@ -109,4 +109,5 @@ export interface QteEvent {
   confidence: number
   actions: QteAction[]
   timestamp: Date
+  reasons?: string[]
 }

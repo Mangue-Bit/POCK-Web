@@ -28,7 +28,7 @@ export function QteProvider({ children }: { children: ReactNode }) {
     const config = ({
       conservador: {
         minConfidence: 75,
-        duration: 15,
+        duration: 30,
         goalLabel: 'Aposta Segura',
         cardLabel: 'Analisar Jogo',
         cornerLabel: 'Mais de 8.5 Cantos',
@@ -36,7 +36,7 @@ export function QteProvider({ children }: { children: ReactNode }) {
       },
       moderado: {
         minConfidence: 65,
-        duration: 10,
+        duration: 30,
         goalLabel: 'GOL AGORA!',
         cardLabel: 'Cartão Iminente',
         cornerLabel: 'Canto nos próximos 5m',
@@ -44,7 +44,7 @@ export function QteProvider({ children }: { children: ReactNode }) {
       },
       agressivo: {
         minConfidence: 55,
-        duration: 6,
+        duration: 30,
         goalLabel: 'ALL IN GOL',
         cardLabel: 'PREDIÇÃO VERMELHO',
         cornerLabel: 'COMBO ESCANTEIOS',
@@ -52,7 +52,7 @@ export function QteProvider({ children }: { children: ReactNode }) {
       }
     }[profile] || {
       minConfidence: 65,
-      duration: 10,
+      duration: 30,
       goalLabel: 'GOL AGORA!',
       cardLabel: 'Cartão Iminente',
       cornerLabel: 'Canto nos próximos 5m',
@@ -90,6 +90,28 @@ export function QteProvider({ children }: { children: ReactNode }) {
         foul: [{ label: config.foulLabel, action: 'bet_foul', odds: profile === 'agressivo' ? 5.8 : 2.8 }]
       }[type],
       timestamp: new Date(),
+      reasons: {
+        goal: [
+          'Alto número de ataques perigosos do time da casa',
+          'Múltiplas finalizações no gol nos últimos minutos',
+          'Pressão ofensiva intensa detectada pela IA'
+        ],
+        card: [
+          'Aumento na frequência de faltas táticas',
+          'Clima de tensão entre jogadores detectado',
+          'Árbitro com média alta de cartões por partida'
+        ],
+        corner: [
+          'Time explora as laterais com frequência',
+          'Volume alto de cruzamentos na área',
+          'Defesa adversária priorizando corte pra linha de fundo'
+        ],
+        foul: [
+          'Disputas físicas intensas no meio-campo',
+          'Histórico de rivalidade entre as equipes',
+          'Estilo de jogo agressivo de ambos os times'
+        ]
+      }[type]
     }
 
     setActiveQte(event)

@@ -8,6 +8,7 @@ interface TeamBadgeProps {
   team: Team
   size?: 'sm' | 'md' | 'lg' | 'xl'
   showName?: boolean
+  className?: string
 }
 
 const sizeClasses = {
@@ -17,7 +18,7 @@ const sizeClasses = {
   xl: 'h-24 w-24 text-xl',
 }
 
-export function TeamBadge({ team, size = 'md', showName = false }: TeamBadgeProps) {
+export function TeamBadge({ team, size = 'md', showName = false, className }: TeamBadgeProps) {
   return (
     <div className="flex flex-col items-center gap-2">
       <div
@@ -26,7 +27,8 @@ export function TeamBadge({ team, size = 'md', showName = false }: TeamBadgeProp
           'bg-gradient-to-br from-secondary to-muted',
           'border-2 border-border shadow-lg',
           'transition-transform hover:scale-105',
-          sizeClasses[size]
+          sizeClasses[size],
+          className
         )}
         style={{
           background: `linear-gradient(135deg, ${team.primaryColor}20, ${team.primaryColor}40)`,

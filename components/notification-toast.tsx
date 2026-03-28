@@ -1,30 +1,13 @@
 'use client'
 
 import { 
-  XMarkIcon, 
-  ArrowTrendingUpIcon, 
-  ExclamationTriangleIcon, 
-  InformationCircleIcon, 
-  BoltIcon 
+  XMarkIcon
 } from '@heroicons/react/24/solid'
 import { Button } from '@/components/ui/button'
 import { useNotifications } from '@/lib/notification-context'
 import { cn } from '@/lib/utils'
 import type { InsightType } from '@/lib/types'
 import { mockMatches } from '@/lib/mock-data'
-
-function getNotificationIcon(type: InsightType) {
-  switch (type) {
-    case 'opportunity':
-      return ArrowTrendingUpIcon
-    case 'warning':
-      return ExclamationTriangleIcon
-    case 'momentum':
-      return BoltIcon
-    default:
-      return InformationCircleIcon
-  }
-}
 
 function getNotificationBorder(type: InsightType) {
   switch (type) {
@@ -44,7 +27,6 @@ export function NotificationToast() {
 
   if (!latestNotification) return null
 
-  const Icon = getNotificationIcon(latestNotification.type)
   const borderColor = getNotificationBorder(latestNotification.type)
   
   const match = mockMatches.find(m => m.id === latestNotification.matchId)
@@ -66,9 +48,6 @@ export function NotificationToast() {
       >
         <div className="p-4">
           <div className="flex items-start gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-              <Icon className="h-4 w-4 text-primary" />
-            </div>
             <div className="flex-1 space-y-1">
               <div className="flex items-start justify-between">
                 <div className="flex flex-col gap-2">
