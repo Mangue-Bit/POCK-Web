@@ -1,8 +1,8 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { 
-  XMarkIcon, 
+import {
+  XMarkIcon,
   FireIcon,
   ArrowTrendingUpIcon,
   ChartBarIcon,
@@ -41,7 +41,7 @@ export function BettingQte() {
       setTimeLeft((prev) => {
         if (prev === null) return null
         const next = Math.max(0, prev - 0.1)
-        
+
         // Transition to minified after 10s of the event duration has passed
         if (activeQte.duration - next >= 10 && !isMinified) {
           setIsMinified(true)
@@ -79,12 +79,26 @@ export function BettingQte() {
           <div className="group relative flex h-24 md:h-28 w-full md:w-[480px] overflow-hidden rounded-2xl md:rounded-3xl border-2 border-primary/20 bg-[#0a0a0a]/95 backdrop-blur-xl shadow-[0_0_50px_rgba(var(--primary),0.15)] ring-1 ring-white/5">
             {/* Pulsing Glow Effect */}
             <div className="absolute -left-10 top-0 h-full w-20 bg-primary/20 blur-[40px] animate-pulse" />
-            
+
             {/* Burning Fuse Progress Bar at the bottom */}
-            <div 
-              className="absolute bottom-0 left-0 h-1 md:h-1.5 bg-gradient-to-r from-emerald-600 to-primary transition-all duration-100 ease-linear shadow-[0_0_15px_theme(colors.primary)]"
+            <div
+              className="absolute bottom-0 left-0 h-2 md:h-2.5 transition-all duration-100 ease-linear bg-gradient-to-r from-red-600 via-red-500 to-red-600 animate-aura-pulse"
               style={{ width: `${progress}%` }}
-            />
+            >
+              {/* Shimmer Effect (Clipped) */}
+              <div className="absolute inset-0 overflow-hidden shimmer-effect rounded-r-full" />
+              
+              {/* Burning Tip */}
+              <div className="absolute right-0 bottom-[-3px] translate-x-[6px]">
+                {/* Glow Area (Smooth Pulse) */}
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 h-10 w-10 rounded-full animate-aura-pulse pointer-events-none" />
+                
+                {/* Floating Fire */}
+                <div className="animate-fire-float">
+                  <FireIcon className="h-6 w-6 text-red-500 drop-shadow-[0_0_12px_rgba(239,68,68,1)]" />
+                </div>
+              </div>
+            </div>
 
             <div className="flex w-full items-center p-3 md:p-5 pl-2 md:pl-4 pr-2 md:pr-3 gap-3 md:gap-5">
               {/* Left Side: Confidence */}
@@ -99,15 +113,15 @@ export function BettingQte() {
               <div className="flex flex-1 flex-col justify-center min-w-0">
                 <div className="flex items-center gap-1.5 md:gap-2 mb-0.5 md:mb-1">
                   <div className="flex items-center gap-1 rounded bg-primary/10 px-1 py-0.5 border border-primary/20">
-                     <span className="text-[7px] md:text-[9px] font-black text-primary uppercase tracking-tighter">LIVE</span>
+                    <span className="text-[7px] md:text-[9px] font-black text-primary uppercase tracking-tighter">LIVE</span>
                   </div>
                   <span className="text-[8px] md:text-[10px] font-black uppercase text-neutral-500 italic tracking-widest truncate">Minuto {match?.minute}' · <span className="hidden sm:inline">Brasileirão</span></span>
                 </div>
-                
+
                 <h3 className="text-sm md:text-base font-black italic uppercase tracking-tight text-white line-clamp-1">
                   {activeQte.actions[0]?.label || 'OPORTUNIDADE'}
                 </h3>
-                
+
                 <div className="flex items-center gap-2 mt-1 px-1 py-0.5 rounded-lg bg-white/5 border border-white/5 w-fit">
                   <TeamBadge team={match!.homeTeam} size="sm" />
                   <span className="text-[10px] font-black text-neutral-600 italic">X</span>
@@ -120,10 +134,10 @@ export function BettingQte() {
                 <div className="text-[8px] md:text-[10px] font-black text-primary italic uppercase tracking-widest animate-pulse whitespace-nowrap">
                   {Math.ceil(timeLeft)}s RESTANTES
                 </div>
-                
+
                 <div className="flex items-center gap-1.5 md:gap-2">
-                  <Button 
-                    size="sm" 
+                  <Button
+                    size="sm"
                     className="h-9 md:h-11 gap-1.5 md:gap-2 bg-gradient-to-r from-emerald-600 to-primary px-3 md:px-5 font-black text-primary-foreground shadow-[0_0_15px_rgba(var(--primary),0.3)] hover:opacity-90 active:scale-95 border-none text-[10px] md:text-sm"
                     onClick={() => {
                       console.log('Instant Bet notification...')
@@ -133,7 +147,7 @@ export function BettingQte() {
                     APOSTAR <ChevronRightIcon className="h-3 w-3 md:h-4 md:w-4" />
                   </Button>
 
-                  <button 
+                  <button
                     onClick={handleDismiss}
                     className="rounded-full p-1.5 md:p-2 text-neutral-500 hover:bg-white/10 hover:text-white transition-all"
                   >
@@ -150,18 +164,18 @@ export function BettingQte() {
       <Dialog open={!!activeQte && !isMinified} onOpenChange={(open) => {
         if (!open && activeQte && !isMinified) handleDismiss()
       }}>
-        <DialogContent 
+        <DialogContent
           className="p-0 overflow-hidden border-2 border-primary/20 w-[95%] sm:max-w-[480px] bg-[#0c0c0c] text-white rounded-2xl md:rounded-3xl"
           showCloseButton={false}
         >
           {/* Top Glow Border */}
           <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-emerald-600 via-primary to-emerald-400 opacity-80" />
-          
+
           <div className="p-4 md:p-6 space-y-4 md:space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <DialogTitle className="text-lg md:text-xl font-black uppercase tracking-tight italic">QUICK-TIME EVENT</DialogTitle>
+                <DialogTitle className="text-lg md:text-xl font-black uppercase tracking-tight italic">QUICK BET</DialogTitle>
                 <div className="hidden min-[400px]:flex ml-1 md:ml-2 items-center gap-1.5 rounded-full bg-primary/10 border border-primary/30 px-2 py-0.5">
                   <div className="h-1 w-1 md:h-1.5 md:w-1.5 rounded-full bg-primary shadow-[0_0_5px_theme(colors.primary)]" />
                   <span className="text-[8px] md:text-[10px] font-black text-primary uppercase tracking-wider">LIVE</span>
@@ -171,7 +185,7 @@ export function BettingQte() {
                 <span className="text-[10px] md:text-sm font-black text-primary tabular-nums uppercase">
                   {Math.ceil(timeLeft - 20)}s restam
                 </span>
-                <button 
+                <button
                   onClick={handleDismiss}
                   className="text-muted-foreground hover:text-white transition-colors"
                 >
@@ -181,15 +195,15 @@ export function BettingQte() {
             </div>
 
             <DialogDescription className="sr-only">
-               Evento em tempo real detectado para {match?.homeTeam.name} vs {match?.awayTeam.name}
+              Evento em tempo real detectado para {match?.homeTeam.name} vs {match?.awayTeam.name}
             </DialogDescription>
 
             {/* Match Info */}
             {match && (
               <div className="flex items-center justify-center gap-4 md:gap-8 py-2">
                 <div className="flex flex-col items-center gap-1 min-w-[80px]">
-                   <TeamBadge team={match.homeTeam} size="md" />
-                   <span className="text-[10px] font-black uppercase text-neutral-400 truncate max-w-[80px]">{match.homeTeam.shortName}</span>
+                  <TeamBadge team={match.homeTeam} size="md" />
+                  <span className="text-[10px] font-black uppercase text-neutral-400 truncate max-w-[80px]">{match.homeTeam.shortName}</span>
                 </div>
 
                 <div className="flex flex-col items-center gap-1">
@@ -202,22 +216,33 @@ export function BettingQte() {
                 </div>
 
                 <div className="flex flex-col items-center gap-1 min-w-[80px]">
-                   <TeamBadge team={match.awayTeam} size="md" />
-                   <span className="text-[10px] font-black uppercase text-neutral-400 truncate max-w-[80px]">{match.awayTeam.shortName}</span>
+                  <TeamBadge team={match.awayTeam} size="md" />
+                  <span className="text-[10px] font-black uppercase text-neutral-400 truncate max-w-[80px]">{match.awayTeam.shortName}</span>
                 </div>
               </div>
             )}
 
             {/* Burning Bar */}
-            <div className="space-y-2 md:space-y-3">
-              <div className="relative h-2 md:h-2.5 w-full rounded-full bg-neutral-900 overflow-hidden">
-                <div 
-                  className="absolute inset-y-0 left-0 rounded-full transition-all duration-100 ease-linear shadow-[0_0_15px_rgba(16,185,129,0.3)]"
-                  style={{ 
-                    width: `${((timeLeft - 20) / 10) * 100}%`,
-                    background: 'linear-gradient(90deg, #059669 0%, #10b981 70%, #34d399 100%)',
-                  }}
-                />
+            <div className="space-y-2 md:space-y-3 pb-6">
+              <div className="relative h-3 md:h-4 w-full rounded-full bg-neutral-900 overflow-visible">
+                <div
+                  className="absolute inset-y-0 left-0 rounded-full transition-all duration-100 ease-linear shadow-[0_0_30px_rgba(239,68,68,0.6)] bg-gradient-to-r from-red-700 via-red-500 to-red-600 animate-aura-flash"
+                  style={{ width: `${((timeLeft - 20) / 10) * 100}%` }}
+                >
+                  {/* Shimmer Effect (Clipped) */}
+                  <div className="absolute inset-0 rounded-full overflow-hidden shimmer-effect" />
+
+                  {/* Burning Tip */}
+                  <div className="absolute right-0 bottom-[-6px] translate-x-[12px]">
+                    {/* Glow Area (Smooth Pulse) */}
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-20 w-20 rounded-full animate-aura-pulse pointer-events-none" />
+                    
+                    {/* Floating Fire */}
+                    <div className="animate-fire-float">
+                      <FireIcon className="h-10 w-10 text-red-500 drop-shadow-[0_0_20px_rgba(239,68,68,1)]" />
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -273,8 +298,8 @@ export function BettingQte() {
 
             {/* Final Buttons */}
             <div className="space-y-2 md:space-y-3 pt-2 md:pt-4">
-              <Button 
-                size="lg" 
+              <Button
+                size="lg"
                 className="group relative h-14 md:h-16 w-full overflow-hidden bg-gradient-to-r from-emerald-600 to-primary text-base md:text-lg font-black text-primary-foreground hover:opacity-90 shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all active:scale-95 border-none"
                 onClick={() => {
                   console.log('Betting sequence...')
@@ -286,9 +311,9 @@ export function BettingQte() {
                 </span>
                 <div className="absolute inset-x-0 bottom-0 h-1/2 bg-white/5 blur-xl pointer-events-none" />
               </Button>
-              
-              <Button 
-                variant="ghost" 
+
+              <Button
+                variant="ghost"
                 className="h-10 md:h-12 w-full text-neutral-500 hover:text-primary hover:bg-primary/5 font-bold uppercase tracking-[0.3em] text-[9px] md:text-[10px]"
                 onClick={handleDismiss}
               >
